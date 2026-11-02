@@ -1,6 +1,8 @@
 # Relai — design document
 
 > Status: **draft v0.1** (2026-11-02). Design phase, nothing is stable yet.
+> Decided: **Go** (single binary, standard library only), **Apache-2.0**, **easy first** — it must be
+> useful to one person or a small team with nothing but git; organisation features are optional.
 > Relai (French for *relay*, as in a relay race): pass the baton between people and their AI agents
 > without losing context, and without rebuilding what already exists.
 
@@ -112,7 +114,7 @@ Relai must fit any repo, language and agent, and be adoptable incrementally:
 
 | Adoption level | What you add | Install needed |
 |---|---|---|
-| **0 — Contract only** | `AGENTS.md`, `relai.yaml`, `.relai/notes.md` written by hand | none |
+| **0 — Contract only** (solo, small team) | `AGENTS.md`, `relai.yaml`, `.relai/notes.md` written by hand | none |
 | **1 — Local tooling** | `relai init`, `relai handoff`, session-start hook, pre-commit check | CLI |
 | **2 — Organisation** | standards pack via marketplace, catalog + MCP server, `relai check` in CI | catalog service |
 | **3 — Platform** | golden-path templates, auto-registration, edge + SSO | platform |
@@ -356,15 +358,14 @@ catalog never ships.
 
 ## 13. Open questions
 
-1. **Language.** Go (single static binary, like Beads and Kanzo; official MCP Go SDK) vs TypeScript
-   (largest MCP ecosystem, npm distribution). Proposal: Go for CLI + MCP server, prototypes in Python.
+1. ~~**Language.**~~ Decided 2026-11-02: Go (single static binary, official MCP Go SDK available).
 2. **Handoff in git or generated on the fly?** Committed file (works offline, reviewable, but
    churn and merge conflicts) vs generated at session start (always fresh). Proposal: generated at
    session start, with an optional committed snapshot for releases.
 3. **Task leases** across agents and people: lean on the task backend (Beads assignee/status) or a
    catalog-side lock service?
-4. **Catalog hosting** for small teams: a git repo of manifests + static index may be enough before a
-   server is needed.
+4. **Catalog hosting** for small teams: a plain git repo of manifests + a static index built by
+   `relai catalog build` (no server) is the default; the MCP server can serve that index locally.
 5. **`relai.yaml` vs Backstage.** Given Backstage's `AiResource` kind and `mcp-server` API type
    (section 11): a standalone file with a Backstage mapping, or only `relai.dev/*` annotations inside
    `catalog-info.yaml`? Proposal: annotations when Backstage is present, standalone file otherwise,

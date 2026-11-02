@@ -17,9 +17,25 @@ Relai is an open, agent-agnostic layer that makes repositories and organisations
 It composes existing standards (AGENTS.md, MCP, Agent Skills, Backstage descriptors, OpenSpec,
 Beads) instead of replacing them.
 
-**Status:** design phase. Read the [design document](docs/DESIGN.md). An early handoff prototype
-lives in [`prototype/`](prototype/).
+**Status:** early development (v0.x, everything may change). Read the [design document](docs/DESIGN.md).
+
+Made to be easy: one binary, no server, nothing but git. Useful on day one for a single person or a
+small team; organisation-wide features (catalog, standards pack) are optional layers.
+
+## Quick start
+
+```sh
+go install github.com/ECG-Rudy-Glt/RELAI/cmd/relai@latest   # Go ≥ 1.23
+
+cd your-repo
+relai init        # adds AGENTS.md (or links it to CLAUDE.md), relai.yaml, .relai/notes.md
+relai handoff     # prints where the work stands, in ≤ 2,000 tokens
+```
+
+Point your agent at it: `AGENTS.md` tells any agent to run `relai handoff` first. With Claude Code you
+can also run it from a SessionStart hook. `relai handoff` reads Beads tasks and OpenSpec changes when
+they are present, and works without them.
 
 ## Licence
 
-To be decided (Apache-2.0 proposed).
+[Apache-2.0](LICENSE).
