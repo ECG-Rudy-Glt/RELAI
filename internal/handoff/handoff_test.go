@@ -1,0 +1,68 @@
+package handoff
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func gitRepo(t *testing.T, commits int) string {
+	t.Helper()
+	dir := t.TempDir()
+	g := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	g("init", "-q", "-b", "main")
+	for i := 0; i < commits; i++ {
+		_ = os.WriteFile(filepath.Join(dir, "f.txt"), []byte(strings.Repeat("x", i+1)), 0o644)
+		g("add", "f.txt")
+		g("commit", "-q", "-m", "commit number "+strings.Repeat("long message ", 5))
+	}
+	return dir
+}
+
+func TestBuildBasics(t *testing.T) {
+	dir := gitRepo(t, 3)
+	doc, err := Build(dir, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "no Beads task graph", "no `.relai/notes.md` yet"} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("missing %q in:\n%s", want, doc)
+		}
+	}
+}
+
+func TestBudgetIsEnforced(t *testing.T) {
+	dir := gitRepo(t, 15)
+	_ = os.MkdirAll(filepath.Join(dir, ".relai"), 0o755)
+	notes := strings.Repeat("- a pitfall that is described at some length to eat the budget\n", 200)
+	_ = os.WriteFile(filepath.Join(dir, ".relai", "notes.md"), []byte(notes), 0o644)
+
+	o := DefaultOptions()
+	o.MaxTokens = 400
+	doc, err := Build(dir, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := EstimateTokens(doc); got > o.MaxTokens {
+		t.Fatalf("handoff is %d tokens, budget %d", got, o.MaxTokens)
+	}
+	if !strings.Contains(doc, "more lines in `.relai/notes.md`") {
+		t.Errorf("truncated notes should say where the rest is:\n%s", doc)
+	}
+}
+
+func TestNotARepo(t *testing.T) {
+	if _, err := Build(t.TempDir(), DefaultOptions()); err == nil {
+		t.Fatal("expected an error outside a git repository")
+	}
+}
