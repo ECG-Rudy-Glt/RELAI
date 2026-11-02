@@ -1,0 +1,8 @@
+apiVersion: relai.dev/v0
+id: relai
+summary: "Repo contract, compact handoff and anti-duplication catalog for teams working with AI agents."
+owners: [ECG-Rudy-Glt]
+provides:
+  - capability: agents.handoff
+  - capability: agents.repo-contract
+consumes: []           # - capability: auth.oidc
