@@ -61,6 +61,17 @@ func TestBudgetIsEnforced(t *testing.T) {
 	}
 }
 
+func TestNextTask(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "tasks.md")
+	_ = os.WriteFile(p, []byte("## 1. Limiter\n- [x] 1.1 Bucket\n\n## 2. HTTP\n  - [ ] 2.1 Middleware: 429\n- [ ] 2.2 Config\n"), 0o644)
+	if got := nextTask(p); got != "2.1 Middleware: 429" {
+		t.Fatalf("got %q", got)
+	}
+	if got := nextTask(filepath.Join(t.TempDir(), "missing.md")); got != "" {
+		t.Fatalf("missing file: got %q", got)
+	}
+}
+
 func TestNotARepo(t *testing.T) {
 	if _, err := Build(t.TempDir(), DefaultOptions()); err == nil {
 		t.Fatal("expected an error outside a git repository")

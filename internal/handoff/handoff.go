@@ -74,6 +74,7 @@ type change struct {
 	CompletedTasks int    `json:"completedTasks"`
 	TotalTasks     int    `json:"totalTasks"`
 	Status         string `json:"status"`
+	Next           string `json:"-"` // first unchecked task in tasks.md
 }
 
 type sources struct {
@@ -106,6 +107,9 @@ func collect(dir string) sources {
 		}
 		_ = json.Unmarshal([]byte(must(run(dir, "openspec", "list", "--json"))), &out)
 		s.changes = out.Changes
+		for i, c := range s.changes {
+			s.changes[i].Next = nextTask(filepath.Join(dir, "openspec", "changes", c.Name, "tasks.md"))
+		}
 	}
 	if b, err := os.ReadFile(filepath.Join(dir, ".relai", "notes.md")); err == nil {
 		s.notes = strings.Split(strings.TrimRight(string(b), "\n"), "\n")
@@ -171,6 +175,9 @@ func render(name string, s sources, commits, tasks, noteLines int) string {
 	default:
 		for _, c := range s.changes {
 			p("- `%s` %d/%d tasks (%s)", c.Name, c.CompletedTasks, c.TotalTasks, c.Status)
+			if c.Next != "" {
+				p("  next: %s", short(c.Next, 100))
+			}
 		}
 		p("Details: `openspec show <name>`.")
 	}
@@ -189,6 +196,20 @@ func render(name string, s sources, commits, tasks, noteLines int) string {
 		}
 	}
 	return b.String()
+}
+
+// nextTask returns the first unchecked item ("- [ ] …") of an OpenSpec tasks.md, or "".
+func nextTask(path string) string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		if l = strings.TrimSpace(l); strings.HasPrefix(l, "- [ ] ") {
+			return strings.TrimSpace(l[len("- [ ] "):])
+		}
+	}
+	return ""
 }
 
 func run(dir, name string, args ...string) (string, error) {
