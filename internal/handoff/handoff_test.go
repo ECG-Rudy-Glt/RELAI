@@ -170,7 +170,7 @@ func TestBuildBasics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.2)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
+	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.3)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("missing %q in:\n%s", want, doc)
 		}
@@ -223,5 +223,90 @@ func TestNamedInCommits(t *testing.T) {
 func TestNotARepo(t *testing.T) {
 	if _, err := Build(t.TempDir(), DefaultOptions()); err == nil {
 		t.Fatal("expected an error outside a git repository")
+	}
+}
+
+func TestTeamHint(t *testing.T) {
+	cases := []struct {
+		name                       string
+		owners, authors, assignees int
+		want                       bool
+	}{
+		{"solo", 1, 1, 0, false},
+		{"one signal: owners", 3, 1, 0, false},
+		{"one signal: authors", 1, 4, 1, false},
+		{"one signal: assignees", 1, 1, 2, false},
+		{"owners and authors", 2, 2, 0, true},
+		{"authors and assignees", 1, 2, 2, true},
+		{"all three", 2, 3, 2, true},
+	}
+	for _, c := range cases {
+		got := teamHint(c.owners, c.authors, c.assignees)
+		if (got != "") != c.want {
+			t.Errorf("%s: hint = %q, want present=%v", c.name, got, c.want)
+		}
+		if c.want && !strings.Contains(got, TeamURL) {
+			t.Errorf("%s: hint does not point to relai-team: %q", c.name, got)
+		}
+	}
+	if h := teamHint(2, 3, 0); !strings.Contains(h, "2 owners") || !strings.Contains(h, "3 commit authors") || strings.Contains(h, "assignees") {
+		t.Errorf("hint should name only the signals that fired: %q", h)
+	}
+}
+
+// teamRepo is a git repo with two owners in relai.yaml and commits by two different authors.
+func teamRepo(t *testing.T, owners string) string {
+	t.Helper()
+	dir := gitRepo(t, 0)
+	_ = os.WriteFile(filepath.Join(dir, "relai.yaml"), []byte("id: x\nowners: "+owners+"\n"), 0o644)
+	g := func(author string, args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME="+author, "GIT_AUTHOR_EMAIL=a@t", "GIT_COMMITTER_NAME="+author, "GIT_COMMITTER_EMAIL=a@t")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	g("bob", "add", "relai.yaml")
+	g("bob", "commit", "-q", "-m", "add manifest")
+	_ = os.WriteFile(filepath.Join(dir, "g.txt"), []byte("y"), 0o644)
+	g("carol", "add", "g.txt")
+	g("carol", "commit", "-q", "-m", "more")
+	return dir
+}
+
+func TestHandoffShowsTeamHintOnlyWithTwoSignals(t *testing.T) {
+	two, err := Build(teamRepo(t, "[team-a, team-b]"), DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(two, "Team signals: 2 owners, 3 commit authors") || !strings.Contains(two, TeamURL) {
+		t.Errorf("expected the hint with two signals:\n%s", two)
+	}
+	one, _ := Build(teamRepo(t, "[team-a]"), DefaultOptions()) // authors only: t, bob, carol
+	if strings.Contains(one, "Team signals") {
+		t.Errorf("one signal must not show the hint:\n%s", one)
+	}
+	solo, _ := Build(gitRepo(t, 2), DefaultOptions())
+	if strings.Contains(solo, "Team signals") {
+		t.Errorf("a solo repo must not show the hint:\n%s", solo)
+	}
+}
+
+func TestTeamHintIsFirstCutUnderBudget(t *testing.T) {
+	dir := teamRepo(t, "[team-a, team-b]")
+	full, _ := Build(dir, DefaultOptions())
+	if !strings.Contains(full, "Team signals") {
+		t.Fatal("setup: hint missing")
+	}
+	// A budget just under the full document must drop the hint and nothing else of substance.
+	o := DefaultOptions()
+	o.MaxTokens = EstimateTokens(full) - 1
+	cut, _ := Build(dir, o)
+	if strings.Contains(cut, "Team signals") {
+		t.Errorf("hint should be the first cut:\n%s", cut)
+	}
+	if !strings.Contains(cut, "Recent commits:") || !strings.Contains(cut, "add manifest") {
+		t.Errorf("cutting the hint should not cost commits:\n%s", cut)
 	}
 }
