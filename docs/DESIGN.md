@@ -113,6 +113,11 @@ Relai must fit any repo, language and agent, and be adoptable incrementally:
 | **2 — Several projects** | a project index repo, a shared conventions repo, upstream changes in handoffs | CLI + two git repos |
 | **3 — Golden path** | project templates with CI and deployment wired | the group's own CI/hosting |
 
+Level 3's scaffolding mechanism (`relai new <template> <dir>`) shipped in `golden-path-template`
+(see `openspec/changes/golden-path-template/`, archived once reviewed). It is bring-your-own
+template only — Relai ships none; the "CI and deployment wired" part is whatever template a group
+writes for itself.
+
 Principles:
 
 - **Adapters, not lock-in.** Relai defines the contract and talks to backends through adapters:
@@ -318,8 +323,13 @@ Each phase ends with acceptance criteria and tests. Phase 1 is useful on its own
 - Acceptance: a breaking change in a provider shows up in 2 consumer handoffs end to end.
 
 ### Phase 4 — golden path reference (optional)
-- [ ] Project template: repo contract, CI, deployment, added to the index on creation.
-- Acceptance: "new tool in 15 minutes", in the index, deployed.
+- [x] Scaffolding mechanism: `relai new <template> <dir>` (`golden-path-template` change) — the
+  mechanism only, no shipped template.
+- [ ] A real project template (repo contract, CI, deployment) that proves it, added to the index
+  on creation. Deliberately out of scope of `golden-path-template`'s own change — see its
+  design.md Non-Goals.
+- Acceptance: "new tool in 15 minutes", in the index, deployed. Not yet met — needs a real
+  template and real CI/hosting (owner's validation exercise, not shipped code).
 
 ## 13. Open questions
 

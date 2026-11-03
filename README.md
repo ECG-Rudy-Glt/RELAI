@@ -123,6 +123,33 @@ This only builds and reads a flat `index.json` you keep in git or share however 
 [`docs/multi-repo.md`](docs/multi-repo.md) for the larger (not yet built) multi-repo design this is a
 first slice of.
 
+## Golden path: scaffold from your own template
+
+Relai ships no template of its own — a group's CI and deployment choices are its own. `relai new`
+scaffolds a new repo from a template you already have (a local directory or a clone URL), the same
+way `relai index build` sources a repo list:
+
+```sh
+relai new ./my-org-template ./my-new-tool          # local template
+relai new https://github.com/you/template.git ./my-new-tool   # or a clone URL
+```
+
+A template is just a directory of files. Any text file may use the placeholder token
+`{{.RepoName}}` (Go's `text/template` syntax); `relai new` substitutes it with the new repo's name
+(the target directory's base name) as it copies the template in. A file that isn't valid template
+syntax — including any binary file — is copied byte for byte, unchanged. Anything the template
+doesn't already provide (`AGENTS.md`, `relai.yaml`, `.relai/notes.md`) is filled in the same way
+`relai init` fills it, without overwriting what the template did provide. The target directory must
+not already exist and contain files — `relai new` never merges into one.
+
+Worked example: a template with an `AGENTS.md` containing `# {{.RepoName}} — instructions for
+AI agents` and a `relai.yaml` with `id: {{.RepoName}}` produces, for `relai new ./tpl ./widgets`,
+an `AGENTS.md` titled "widgets" and a `relai.yaml` with `id: widgets` — and still gets
+`.relai/notes.md` from `relai init`'s own template, since the example template didn't provide one.
+
+On success, `relai new` prints the `relai index build` command to add the new repo to your group's
+index — it does not run it for you.
+
 ## Licence
 
 [Apache-2.0](LICENSE).

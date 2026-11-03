@@ -12,6 +12,7 @@ import (
 	"github.com/ECG-Rudy-Glt/RELAI/internal/handoff"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/initrepo"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/scaffold"
 )
 
 // defaultIndexPath is where `relai index build` writes and `relai find` reads by default.
@@ -31,6 +32,10 @@ Usage:
                          into an index (default: .relai/index.json)
   relai find [--index <path>] <capability>
                          search the index for repos that already provide <capability>
+  relai new <template> <dir>
+                         scaffold <dir> from <template> (a local path or clone URL), substituting
+                         {{.RepoName}} etc. in its text files, then filling in anything the
+                         template didn't already provide (AGENTS.md, relai.yaml, .relai/notes.md)
   relai version
 
 Run "relai <command> -h" for options.
@@ -147,6 +152,25 @@ func main() {
 		for _, e := range found {
 			fmt.Printf("- %s (%s): %s\n", e.RelaiYAML.ID, e.Source, e.RelaiYAML.Summary)
 		}
+	case "new":
+		fs := flag.NewFlagSet("new", flag.ExitOnError)
+		_ = fs.Parse(os.Args[2:])
+		if fs.NArg() < 2 {
+			fmt.Fprintln(os.Stderr, "usage: relai new <template> <dir>")
+			os.Exit(2)
+		}
+		tplSrc, dir := fs.Arg(0), fs.Arg(1)
+		r, err := scaffold.New(tplSrc, dir, scaffold.Tokens{RepoName: filepath.Base(dir)})
+		exitOn(err)
+		fmt.Printf("scaffolded %s from %s\n", dir, tplSrc)
+		for _, c := range r.Created {
+			fmt.Println("created ", c)
+		}
+		for _, s := range r.Skipped {
+			fmt.Println("kept    ", s)
+		}
+		fmt.Println()
+		fmt.Println(indexNextStep(dir))
 	case "version", "--version", "-v":
 		fmt.Println("relai", version)
 	case "help", "-h", "--help":
@@ -155,6 +179,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", os.Args[1], usage)
 		os.Exit(2)
 	}
+}
+
+// indexNextStep is the hint printed after a successful `relai new`, naming the command to add the
+// freshly scaffolded repo to the group's cross-repo index — never run automatically.
+func indexNextStep(dir string) string {
+	return fmt.Sprintf("Next: add %s to your group's index — relai index build -o <path> <list-file>", dir)
 }
 
 func dirArg(fs *flag.FlagSet) string {
