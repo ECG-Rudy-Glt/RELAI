@@ -6,20 +6,21 @@
 
 ## 1. What Relai is, in three lines
 
-A vendor-neutral layer that makes repos and organisations agent-native: a **repo contract** with a
-compact, verifiable **handoff** (≤ 2,000 tokens), **check before you build** (an org capability
-catalog that agents query over MCP to avoid duplicating tools), a CI-enforced **standards pack**,
-and **interconnection** between repos. Full reasoning: [`DESIGN.md`](DESIGN.md).
+A vendor-neutral layer, files in git plus one CLI, that helps people and their agents collaborate
+across all their projects: a **repo contract** with a compact, verifiable **handoff** (≤ 2,000
+tokens), **check before you build** (a git-based project index), **shared conventions**, **links
+between projects**, and an optional **golden path** template. Full reasoning: [`DESIGN.md`](DESIGN.md).
 
 Guiding constraint, decided with the project owner: **easy first**. It must be useful to one
-person or a small team with nothing but git — one binary, no server. Organisation features are
-optional layers on top.
+person or a small team with nothing but git — one binary, no server. **Not a portal** (DESIGN v0.2):
+no central service, no Backstage, no federation or SSO.
 
 ## 2. Where things stand
 
 | Area | State |
 |---|---|
-| Design | `docs/DESIGN.md` draft v0.1: problem, architecture (Mermaid), integration levels, interconnection (`relai.yaml`), standards pack, diagrams-as-models, market scan with verdict, 5-phase plan, open questions |
+| Design | `docs/DESIGN.md` draft v0.2 (refocused 2026-11-03, no portal): problem, architecture (Mermaid), adoption levels, links between projects (`relai.yaml`), shared conventions, diagrams-as-models, market scan with verdict, 4-phase plan, open questions |
+| Experiment E2 | Harness in `eval/` (3 fixtures, 3 conditions, Claude Code headless). Pilot: all correct; handoff ≈ 7× fewer tokens than reading the docs on 2 fixtures, no gain on the in-flight OpenSpec change. See `eval/README.md` |
 | Market scan | Done 2026-11-02 (DESIGN §11). Verdict: partly covered by others, the gap is real — handoff standard, duplicate detection, conformance check, cross-repo contracts |
 | CLI | Go, stdlib only, `cmd/relai`: `init` (adds `AGENTS.md` or links it to `CLAUDE.md`, `relai.yaml`, `.relai/notes.md`; never overwrites), `handoff` (git + Beads + OpenSpec + notes, budget enforced by showing fewer items, `-o` to write a file), `version` |
 | Tests | `internal/handoff` (basics, budget enforced, not-a-repo), `internal/initrepo` (idempotent, never overwrites, CLAUDE.md link). All pass |
@@ -28,20 +29,24 @@ optional layers on top.
 | Dogfooding | This repo has its own `AGENTS.md`, `relai.yaml`, `.relai/notes.md`, Beads (`relai-` prefix) and OpenSpec (`openspec/`, Claude skills in `.claude/`) |
 | Licence | Apache-2.0 |
 
-Not done yet: no spec documents in `spec/`, no eval harness (E2), no releases/binaries, no
-`relai validate`/`check`, no catalog, nothing of phases 2–5.
+Not done yet: no spec documents in `spec/`, no releases/binaries, no `relai validate`, no project
+index, nothing of phases 2–4.
 
 ## 3. Decisions already taken (do not reopen without a reason)
 
 - **Go, standard library only** — single static binary, trivial install, easy to audit.
 - **Apache-2.0**, public repo, English only.
 - **Easy first** — every feature works for one person with only git.
-- **Compose, don't rebuild** — `AGENTS.md`, MCP, Agent Skills, OpenSpec, Beads, Backstage
-  descriptors (including the new `AiResource` kind and `mcp-server` API type), the Claude / Codex /
+- **Compose, don't rebuild** — `AGENTS.md`, Agent Skills, OpenSpec, Beads, the Claude / Codex /
   Copilot plugin marketplaces.
+- **Not a portal** — collaboration between people across projects, with git only. No central
+  service, no Backstage compatibility, no federation, no SSO access control.
 - **Deterministic handoff** — built from structured sources, no LLM; budget enforced by
   truncation of lists, never by rewording. An LLM may only help curate `.relai/notes.md`.
-- **Small-team catalog = a git repo of manifests + static index**, no server by default.
+- **Project index = a git repo of `relai.yaml` files + static index**, queried by the CLI; an
+  optional local MCP server, no hosting.
+- **Shared conventions = a versioned git repo** that `relai.yaml` points to; no signed policy packs.
+- **E2 before the handoff spec** — the eval decides the format.
 - **Diagrams are views generated from models** (Mermaid/D2/C4 text only); a generic system-model
   toolkit would be a sibling project, later.
 
@@ -49,19 +54,15 @@ Not done yet: no spec documents in `spec/`, no eval harness (E2), no releases/bi
 
 Tracked in Beads — `bd ready` shows them; IDs in brackets.
 
-1. **Handoff format spec** [`relai-a7o.2`] — `spec/handoff.md`: required sections, ordering,
+1. **E2 eval harness** [`relai-a7o.7`] — in progress, harness and 3 fixtures in `eval/`. Left:
+   harder fixtures (the pilot was too easy: every condition was right), the handoff improvement the
+   pilot asks for (name the next unchecked task of an active OpenSpec change), a second agent
+   vendor (Codex not installed), net-of-overhead token figures. Protocol in `eval/README.md`.
+2. **Handoff format spec** [`relai-a7o.2`] — `spec/handoff.md`: required sections, ordering,
    budget rules and the truncation order (tasks, then commits, then notes), the "pointer" lines
-   (`bd show`, `openspec show`), versioning of the format. The current Go output is the reference.
-2. **Manifest and layout spec** [`relai-a7o.1`] — `spec/relai.yaml.schema.json` + `spec/layout.md`
-   (`.relai/` contents, `AGENTS.md` ↔ `CLAUDE.md`). Keep it mappable to Backstage annotations
-   (`relai.dev/*`), see DESIGN §13 question 5.
-3. **E2 eval harness** [`relai-a7o.7`] — the proof that matters. Plan:
-   - 3+ fixture repos (small scripted git histories with Beads tasks, an OpenSpec change, a few
-     notes) where the correct next step is known in advance;
-   - run at least 2 different agents headless and cold, three conditions: (a) nothing,
-     (b) "read the docs", (c) `AGENTS.md` + `relai handoff`;
-   - measure input tokens and whether the chosen next step is right (graded against the fixture);
-   - target: (c) as correct as (b) with ≥ 10× fewer tokens. Put fixtures in `eval/`.
+   (`bd show`, `openspec show`), versioning of the format. Written from what E2 shows.
+3. **Manifest and layout spec** [`relai-a7o.1`] — `spec/relai.yaml.schema.json` + `spec/layout.md`
+   (`.relai/` contents, `AGENTS.md` ↔ `CLAUDE.md`, `conventions:` pointer).
 4. **Session-start integrations** [`relai-a7o.6`] — a Claude Code SessionStart hook snippet and a
    generic shell snippet; document them in the README.
 5. **Release** [`relai-a7o.8`] — goreleaser binaries for Linux/macOS/Windows + one-line install,
@@ -90,6 +91,5 @@ Tooling notes:
 
 ## 6. Open questions for the owner
 
-See DESIGN §13. The ones that block phase 1: none. The ones to settle before phase 3:
-`relai.yaml` standalone vs Backstage annotations, catalog hosting for teams, task leases across
-agents.
+See DESIGN §13. The ones that block phase 1: none. To settle before phase 2: what the project
+index stores (copies of `relai.yaml` or pointers), task leases across agents.
