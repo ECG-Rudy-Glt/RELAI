@@ -12,6 +12,8 @@
 - 2026-11-03 — relai.yaml parsing (`internal/index`) is a small hand-rolled parser for the exact subset the format uses (flat scalars, inline `[a, b]` lists, one-level `- capability: x` block lists), not a YAML library — matches "stdlib only" and the format is too constrained to justify the dependency.
 - 2026-11-03 — Handoff format bumped to v0.2 for degraded mode (new `## Recently touched files` / `## Open markers` sections) — a new section is a minor version change per `spec/handoff.md` §7.
 
+- 2026-11-03 — Handoff suggests RELAI-TEAM only when two of three signals of parallel work are present (2+ owners, 2+ in-progress assignees, 2+ commit authors in 14 days) — one signal alone is normal in solo work, and the same human can appear under two author names; it is the first line cut under budget (format v0.3, PR #4).
+
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->
 - `bd init` makes its own commit and edits AGENTS.md/.gitignore → use `--skip-agents --skip-hooks`, then `git reset --soft HEAD~1` and recommit.
@@ -23,3 +25,13 @@
 - Backdate git fixture commits with `GIT_AUTHOR_DATE`/`GIT_COMMITTER_DATE` env vars when a test needs "nothing touched recently" — a freshly created `t.TempDir()` git repo's commit is always "now", so a 7-day recency window needs an explicit old date, not a bare `git init`.
 - Recent goreleaser (`go install .../goreleaser/v2@latest`) refuses to build with system Go 1.19 (go.mod requires an exact `1.23.x` format Go can't satisfy) — use the Go 1.23 toolchain at `/opt/go1.23/bin` (`export PATH=/opt/go1.23/bin:$(go env GOPATH)/bin:$PATH GOFLAGS=-mod=mod`) for `go install` and `goreleaser release --snapshot --clean`.
 - `goreleaser` v2's archive config uses `formats: [tar.gz]` (and `format_overrides: [{goos: windows, formats: [zip]}]`), not v1's singular `format:` key.
+- A shell heredoc without quotes (`<<EOF`) runs backticked text as commands: when writing Markdown with backticks from the shell, quote the delimiter (`<<'EOF'`) or write the file with the editor tool.
+
+### Next session
+- 2026-11-03 — Open PRs: RELAI #3 (AGENTS.md no-CLI fallback; needs an approval, branch protection), #4 (handoff Team-signals hint, closes relai-xj0), #5 (positioning docs, closes relai-idg and relai-att), this housekeeping PR; RELAI-TEAM #2 (relai-mcp). Merge them, then tag the next release (v0.1.0 is already published).
+- RELAI-TEAM foundation is merged and `relai-mcp` is in review. State there: `relai handoff`. `deployment-presets` is deferred on purpose (needs real requirements first).
+- `team-server-mode` (docs-only change) is done but not archived: archive after the owner reviews the DESIGN §11/§12 and multi-repo §9 wording.
+- Launch post drafted in `docs/posts/`; review and publish is a Beads task.
+- `adoption-and-cross-repo-index` and `golden-path-template` are archived; their specs are in `openspec/specs/`.
+- Test sandboxes (gone after a reboot): `/tmp/relai-sim` (10 fictional repos), `/tmp/relai-board-sim` (same, seeded with tasks and changes).
+- Tooling: system Go is 1.19, use `/opt/go1.23/bin`. A `relai` binary is built at `~/.local/bin/relai`.

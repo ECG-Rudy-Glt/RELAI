@@ -1,4 +1,4 @@
-# Handoff — Relai, end of session 2 (2026-11-03)
+# Handoff — Relai, end of session 3 (2026-11-03)
 
 > For whoever picks the project up next, human or agent. Read this once; afterwards the live
 > state comes from `relai handoff` (generated) and `.relai/notes.md` (decisions, pitfalls).
@@ -22,19 +22,21 @@ no central service, no Backstage, no federation or SSO.
 | Design | `docs/DESIGN.md` draft v0.2 (refocused 2026-11-03, no portal): problem, architecture (Mermaid), adoption levels, links between projects (`relai.yaml`), shared conventions, diagrams-as-models, market scan with verdict, 4-phase plan, open questions |
 | Experiment E2 | Harness in `eval/` (4 fixtures + real repos, 3 conditions, Claude Code headless). Handoff as correct as reading the docs on every fixture, 1.6–16× fewer tokens; F4 (stale tracker) forced the format to show blocked tasks and open tasks named in commits. See `eval/README.md` |
 | Market scan | Done 2026-11-02 (DESIGN §11). Verdict: partly covered by others, the gap is real — handoff standard, duplicate detection, conformance check, cross-repo contracts |
-| CLI | Go, stdlib only, `cmd/relai`: `init` (adds `AGENTS.md` or links it to `CLAUDE.md`, `relai.yaml`, `.relai/notes.md`; never overwrites), `handoff` (git + Beads + OpenSpec + notes, budget enforced by showing fewer items, `-o` to write a file; **degraded mode** when none of the three is present — git-only, recently-touched-files + TODO/FIXME, format v0.2), `discover`, `index build` / `find` (cross-repo capability search, new in this session), `version` |
+| CLI | Go, stdlib only, `cmd/relai`: `init` (adds `AGENTS.md` or links it to `CLAUDE.md`, `relai.yaml`, `.relai/notes.md`; never overwrites), `handoff` (git + Beads + OpenSpec + notes, budget enforced by showing fewer items, `-o` to write a file; **degraded mode** when none of the three is present — git-only, recently-touched-files + TODO/FIXME), `discover`, `index build` / `find` (cross-repo capability search), `new <template> <dir>` (golden-path scaffolding), `version`. Handoff **format v0.3**: adds a one-line `Team signals:` hint pointing to RELAI-TEAM when two signals of parallel work are present (PR #4) |
 | Tests | `internal/handoff` (basics, budget enforced, not-a-repo, degraded mode: git section unchanged, no Tasks/Active changes, recent files + markers, truncation), `internal/initrepo` (idempotent, never overwrites, CLAUDE.md link), `internal/discover` (`HasCoreHarness`), `internal/index` (build, clone URL, find). All pass |
 | CI | GitHub Actions `ci.yml`: gofmt, vet, test — green on `main` |
 | Experiment E1 | On a real ~420-commit infra repo: cold start ≈ 1,700 tokens with `AGENTS.md` + handoff vs ≈ 96,000 reading the docs naively; the Go `relai handoff` output was ≈ 490 tokens |
 | Dogfooding | This repo has its own `AGENTS.md`, `relai.yaml`, `.relai/notes.md`, Beads (`relai-` prefix) and OpenSpec (`openspec/`, Claude skills in `.claude/`) |
 | Licence | Apache-2.0 |
-| OpenSpec change `adoption-and-cross-repo-index` | Planning complete (proposal, 2 spec deltas, design, tasks — `openspec validate --strict` passes). Implemented this session: groups 1–4 (17/19 tasks) — `internal/index` (build from local paths/clone URLs, skip-and-report), `relai index build`/`relai find` CLI, degraded-mode `relai handoff` (git-only report, format bumped to v0.2, spec'd in `spec/handoff.md` §4.7), and the release pipeline (`.goreleaser.yaml`, `.github/workflows/release.yml`, `scripts/install.sh`; all verified locally — snapshot build, container install test — with Go 1.23 at `/opt/go1.23` since the system Go is 1.19). Left: group 5 (public write-up, no code), already-done group 6 (hosted-index design note). See `openspec/changes/adoption-and-cross-repo-index/` |
+| OpenSpec | Both implemented changes are **archived** and their specs live in `openspec/specs/`: `cross-repo-index`, `git-only-handoff` (from `adoption-and-cross-repo-index`) and `golden-path-scaffold` (from `golden-path-template`). `team-server-mode` (docs-only positioning, `skip_specs`) is in review, PR #5; `handoff-team-hint` in PR #4 |
+| Release | **v0.1.0 is published** (6 platform archives + checksums, 2026-11-03); `scripts/install.sh` installs it (checked). It is the current `main` as of PR #2 (golden path included); PRs #3–#5 come after it, so tag a v0.1.1/v0.2.0 when they land |
+| RELAI-TEAM | The optional, separate team layer: [github.com/ECG-Rudy-Glt/RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM). Foundation merged (live cross-repo board, atomic claim/release, token auth, Docker); `relai-mcp` (MCP tools for agents) in its PR #2, verified with three real Claude Code agents. Relai never depends on it; docs position it (PR #5). `deployment-presets` deferred there on purpose |
 
-Not done yet: no tag has been pushed, so no release exists on GitHub yet (the pipeline is built
-and verified locally, task 4.*); no `relai validate`; nothing of phases 2–4 of
-`docs/multi-repo.md` (hub, sync, managed blocks, `relai check`). The cross-repo index is now a
-*flat* `index.json` built by one command and searched by another — not the hosted/scheduled hub
-design in `docs/multi-repo.md`, which stays a separate, larger, not-yet-decided proposal.
+Not done yet: no `relai validate`; nothing of phases 2–4 of `docs/multi-repo.md` (hub, sync,
+managed blocks, `relai check`). The cross-repo index is a *flat* `index.json` built by one
+command and searched by another — not the hosted/scheduled hub design in `docs/multi-repo.md`,
+which stays a separate, larger, not-yet-decided proposal. The launch post is drafted
+(`docs/posts/`) but unreviewed and unpublished (`relai-a7e`).
 
 ## 3. Decisions already taken (do not reopen without a reason)
 
@@ -66,23 +68,14 @@ design in `docs/multi-repo.md`, which stays a separate, larger, not-yet-decided 
 
 ## 4. Next steps, in order
 
-**Current priority — finish implementing `openspec/changes/adoption-and-cross-repo-index/`**
-(planning done, see table above; 17/19 tasks done). Run
-`openspec instructions apply --change "adoption-and-cross-repo-index" --json` or `/opsx:apply` to
-continue. Its `tasks.md` groups, in dependency order:
-1. Cross-repo index: build (`internal/index`, `relai index build`) — tasks 1.1–1.4. **Done.**
-2. Cross-repo index: find (`relai find`) — tasks 2.1–2.3. **Done.**
-3. Degraded-mode handoff (bare git, no AGENTS.md/OpenSpec/Beads) — tasks 3.1–3.5. **Done.**
-4. Release and public install (goreleaser, install script) — tasks 4.1–4.4, implements
-   `relai-a7o.8`. **Done** (verified locally; no tag pushed yet — that's the real first-release
-   trigger, left for the owner).
-5. Public proof content (blog/HN post using `DESIGN.md` §11 + `eval/README.md` numbers) —
-   tasks 5.1–5.2, no code, can land after archive. **Next** (only remaining group before archive).
-6. Hosted-index design note — **done** (task 6.1, `docs/DESIGN.md` §6).
-
-With groups 1–4 and 6 done, the change is ready to archive once the owner reviews it (task 5,
-public content, may land after archive per `tasks.md`'s workflow note). First real release: push
-a `vX.Y.Z` tag — `.github/workflows/release.yml` runs the existing checks then `goreleaser`.
+**Current priority — land the open PRs, then decide the next slice.**
+1. Review and merge, in any order: RELAI **#3** (AGENTS.md no-CLI fallback; branch protection asks
+   for an approval), **#4** (handoff Team-signals hint), **#5** (positioning docs); and
+   RELAI-TEAM **#2** (`relai-mcp`). Then archive `team-server-mode` once its §11/§12/§9 wording
+   is reviewed.
+2. Tag the next release once those land (the release workflow runs on a `vX.Y.Z` tag).
+3. Review and publish the launch post (`relai-a7e`).
+4. Pick from the backlog below; nothing blocks any order.
 
 Beads tasks not covered by that change — `bd ready` shows them; IDs in brackets:
 
@@ -100,9 +93,9 @@ Beads tasks not covered by that change — `bd ready` shows them; IDs in bracket
    generic shell snippet; document them in the README. (The shelved session-end `/clear` idea, see
    §3 above, would mirror this task if ever picked back up.)
 5. **Multi-repo strategy, rest of it** [`relai-d6i`] — hub repo, managed blocks, `relai sync`,
-   `relai check` (contract/drift — not `relai find`, which the new change covers), CI templates,
-   workspace handoff (`docs/multi-repo.md`). The new change implements only the index slice
-   (`relai-d6i.4`'s `build`/`find` half); the rest is still just a proposal. Review before code.
+   `relai check` (contract/drift — not `relai find`, which the archived change covers), CI templates,
+   workspace handoff (`docs/multi-repo.md`). Only the index slice (`relai-d6i.4`'s
+   `build`/`find` half) exists; the rest is still just a proposal. Review before code.
 6. Then `relai validate` [`relai-a7o.5`], the GitHub Issues adapter when Beads is absent
    [`relai-a7o.3`], the "upstream changes" placeholder [`relai-a7o.4`].
 
@@ -119,6 +112,9 @@ bd ready                                         # Beads ≥ 1.3 (optional for r
 
 Tooling notes:
 - OpenSpec needs **Node ≥ 22.12**; distro Node 18 is too old.
+- Debian's Go is **1.19**; the project needs **1.23**. A toolchain is at `/opt/go1.23/bin`
+  (`export PATH=/opt/go1.23/bin:$PATH`). For a `relai` on your PATH:
+  `go build -o ~/.local/bin/relai ./cmd/relai` (or use the v0.1.0 release).
 - `bd init` makes its own commit and edits `AGENTS.md`/`.gitignore`: use
   `--skip-agents --skip-hooks`, then undo its commit and recommit cleanly. After a
   `git reset --soft`, check what is still staged before the next commit — that is how the
@@ -133,7 +129,5 @@ Tooling notes:
 See DESIGN §13. The ones that block phase 1: none. To settle before phase 2: what the project
 index stores (copies of `relai.yaml` or pointers), task leases across agents.
 
-Also open, surfaced in session 2: whether to implement
-`openspec/changes/adoption-and-cross-repo-index/` next, or keep working through the Beads backlog
-above first — nothing blocks either order. (Resolved during session 2: implemented the change's
-groups 1–3; the release work in group 4 is next.)
+Also open: whether team coordination features beyond RELAI-TEAM's board (claim expiry, a web
+board, deployment presets) are wanted at all — they live in that repo's backlog, not here.
