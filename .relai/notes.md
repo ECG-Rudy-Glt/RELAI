@@ -14,6 +14,10 @@
 
 - 2026-11-03 — Handoff suggests RELAI-TEAM only when two of three signals of parallel work are present (2+ owners, 2+ in-progress assignees, 2+ commit authors in 14 days) — one signal alone is normal in solo work, and the same human can appear under two author names; it is the first line cut under budget (format v0.3, PR #4).
 
+- 2026-11-03 — Onboarding for Claude Code: `relai init` adds `CLAUDE.md` (`@AGENTS.md`) and a SessionStart hook script, because AGENTS.md is advisory and older Claude Code reads only CLAUDE.md. Verified with real `claude -p` sessions in fresh clones: with the hook, the agent answers from the handoff in one turn.
+- 2026-11-03 — Handoff format v0.4: when Beads exists but cannot be read (fresh clone, no bd, bd failing) the handoff says so and shows the `.beads/issues.jsonl` snapshot, never "Ready: 0". Reason picked from a fixed set, never raw tool output.
+- 2026-11-03 — The task list travels in git as `.beads/issues.jsonl`, exported by `scripts/sync-beads.sh` with the `owner` field removed (it is the creator's e-mail). A fresh clone runs `bd bootstrap --yes`.
+
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->
 - `bd init` makes its own commit and edits AGENTS.md/.gitignore → use `--skip-agents --skip-hooks`, then `git reset --soft HEAD~1` and recommit.
@@ -29,6 +33,11 @@
 - Recent goreleaser (`go install .../goreleaser/v2@latest`) refuses to build with system Go 1.19 (go.mod requires an exact `1.23.x` format Go can't satisfy) — use the Go 1.23 toolchain at `/opt/go1.23/bin` (`export PATH=/opt/go1.23/bin:$(go env GOPATH)/bin:$PATH GOFLAGS=-mod=mod`) for `go install` and `goreleaser release --snapshot --clean`.
 - `goreleaser` v2's archive config uses `formats: [tar.gz]` (and `format_overrides: [{goos: windows, formats: [zip]}]`), not v1's singular `format:` key.
 - A shell heredoc without quotes (`<<EOF`) runs backticked text as commands: when writing Markdown with backticks from the shell, quote the delimiter (`<<'EOF'`) or write the file with the editor tool.
+
+- `bd export` writes `"owner":"<your e-mail>"` into every issue: never commit a raw export (an earlier commit already published it in this repo's history; it cannot be undone from here). Use `scripts/sync-beads.sh`.
+- Beads keeps its Dolt database in `.beads/embeddeddolt` (git-ignored): a fresh clone has no tasks and `bd list` says "no beads database found". Before v0.4 the handoff printed "Ready: 0" in that case, which an agent reads as "nothing to do".
+- `install.sh` had no integrity check (it now verifies SHA-256 against `checksums.txt`); that still does not defend against a compromised release.
+- A fake `bd` first on PATH (a tiny shell script) is the reliable way to test the handoff's Beads branches without the real tool or its disk writes.
 
 ### Next session
 - 2026-11-03 — Open PRs: RELAI #3 (AGENTS.md no-CLI fallback; needs an approval, branch protection), #4 (handoff Team-signals hint, closes relai-xj0), #5 (positioning docs, closes relai-idg and relai-att), this housekeeping PR; RELAI-TEAM #2 (relai-mcp). Merge them, then tag the next release (v0.1.0 is already published).
