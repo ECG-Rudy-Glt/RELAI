@@ -3,6 +3,7 @@ package initrepo
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -28,6 +29,23 @@ func TestInitIsIdempotentAndNeverOverwrites(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(notes); string(got) != string(custom) {
 		t.Fatal("existing notes.md was overwritten")
+	}
+}
+
+func TestAgentsTemplateCoversNoCLIAndCrossRepoCheck(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := Init(dir, true); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(b)
+	for _, want := range []string{"not installed or not found", "relai find <capability>"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("AGENTS.md template missing %q:\n%s", want, got)
+		}
 	}
 }
 
