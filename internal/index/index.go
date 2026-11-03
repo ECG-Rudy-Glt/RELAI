@@ -91,15 +91,11 @@ func Build(sources []string) (entries []Entry, skipped []Skip) {
 }
 
 func readOne(src string) (Manifest, error) {
-	path := src
-	if isCloneURL(src) {
-		tmp, err := cloneShallow(src)
-		if err != nil {
-			return Manifest{}, err
-		}
-		defer os.RemoveAll(tmp)
-		path = tmp
+	path, cleanup, err := Fetch(src)
+	if err != nil {
+		return Manifest{}, err
 	}
+	defer cleanup()
 	st, err := os.Stat(path)
 	if err != nil || !st.IsDir() {
 		return Manifest{}, fmt.Errorf("not found")
@@ -117,6 +113,21 @@ func readOne(src string) (Manifest, error) {
 var cloneURLPattern = regexp.MustCompile(`^(https?|git|ssh|file)://|^git@`)
 
 func isCloneURL(s string) bool { return cloneURLPattern.MatchString(s) }
+
+// Fetch resolves src (a local path or clone URL) to a local directory: a clone URL is
+// shallow-cloned to a new temp directory, read-only; a local path is returned as-is. The caller
+// MUST call cleanup once done with the path; it is a no-op for a local path. Shared by relai
+// index build and relai new (internal/scaffold), so both source a repo or template the same way.
+func Fetch(src string) (path string, cleanup func(), err error) {
+	if !isCloneURL(src) {
+		return src, func() {}, nil
+	}
+	tmp, err := cloneShallow(src)
+	if err != nil {
+		return "", func() {}, err
+	}
+	return tmp, func() { os.RemoveAll(tmp) }, nil
+}
 
 // cloneShallow clones a URL (including file://) to a new temp dir and returns its path; the
 // caller removes it.
