@@ -73,8 +73,8 @@ flowchart TB
   repo --> handoff
   conv["Shared conventions repo (versioned)"] -- "referenced by relai.yaml" --> repo
   index["Project index repo (relai.yaml of every project)"]
-  repo -- "relai index add" --> index
-  index -- "upstream changes" --> handoff
+  repo -- "relai index build" --> index
+  index -- "upstream changes (planned)" --> handoff
   person(["Person B + their agent"]) -- "git pull, read L0 + L1, then bd ready" --> repo
   person -- "relai find: check before you build" --> index
   tpl["Golden path template (optional)"] -- "new repo, pre-wired" --> repo
@@ -160,6 +160,16 @@ plus a generated static index file. From it the CLI derives:
 
 An optional local MCP server can expose the same queries to agents; it reads the same index and
 needs no hosting.
+
+**Hosted index — deferred, optional, off by default.** For a team that would rather query one
+shared endpoint than have each clone build its own `index.json` from `repos.txt`, a small
+read-only HTTP service (one Docker image) could serve the same index a `relai index build` already
+produces. This stays an *additive* layer: `relai find` keeps working against a local `index.json`
+with no server involved, and nothing here reopens the "not a portal" decision (§2) — no auth
+beyond what git access already implies, no write path, no central source of truth other than the
+`relai.yaml` files committed in each repo. Not built yet; raised while planning
+`openspec/changes/adoption-and-cross-repo-index/` (see that change's `design.md`), to be picked up
+only once a team actually asks for it rather than speculatively.
 
 ## 7. Shared conventions
 
