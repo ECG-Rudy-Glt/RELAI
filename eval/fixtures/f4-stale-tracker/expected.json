@@ -1,0 +1,10 @@
+{
+  "summary": "pg-4 (Postgres 17) is done but still open in Beads; the next step is the backfill pg-6.",
+  "accept_ids": ["pg-6"],
+  "accept_patterns": ["(?i)backfill"],
+  "traps": {
+    "pg-4": "trusted the stale tracker and redid the migration",
+    "pg-5": "picked the health endpoint",
+    "pg-7": "picked the rename"
+  }
+}

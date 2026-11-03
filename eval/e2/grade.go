@@ -43,6 +43,9 @@ func (e Expected) Grade(next string) (correct bool, trap string) {
 	if next == "" {
 		return false, "no NEXT line"
 	}
+	if len(e.AcceptIDs) == 0 && len(e.AcceptPatterns) == 0 {
+		return false, ungraded
+	}
 	for _, id := range e.AcceptIDs {
 		if matches(id, next) {
 			return true, ""
@@ -65,6 +68,9 @@ func (e Expected) Grade(next string) (correct bool, trap string) {
 	}
 	return false, "other: " + short(next, 60)
 }
+
+// ungraded marks answers on real repos, which have no known right answer.
+const ungraded = "ungraded"
 
 func isPattern(key string) bool { return strings.HasPrefix(key, "(?") }
 

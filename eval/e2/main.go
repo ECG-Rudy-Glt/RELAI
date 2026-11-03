@@ -73,6 +73,7 @@ type Result struct {
 func main() {
 	var (
 		fixtures = flag.String("fixtures", "", "comma-separated fixture names (default: all)")
+		repos    = flag.String("repos", "", "comma-separated paths of real repos to run instead of fixtures (ungraded)")
 		conds    = flag.String("conditions", strings.Join(conditions, ","), "conditions to run")
 		agentsF  = flag.String("agents", "claude-haiku,claude-sonnet", "agents to run")
 		runs     = flag.Int("runs", 1, "runs per cell")
@@ -81,13 +82,13 @@ func main() {
 		dry      = flag.Bool("dry", false, "build the fixtures and print the prompts, run no agent")
 	)
 	flag.Parse()
-	if err := run(*fixtures, *conds, *agentsF, *runs, *par, *out, *dry); err != nil {
+	if err := run(*fixtures, *repos, *conds, *agentsF, *runs, *par, *out, *dry); err != nil {
 		fmt.Fprintln(os.Stderr, "e2:", err)
 		os.Exit(1)
 	}
 }
 
-func run(fixtureList, condList, agentList string, runs, par int, out string, dry bool) error {
+func run(fixtureList, repoList, condList, agentList string, runs, par int, out string, dry bool) error {
 	root, err := filepath.Abs("eval/fixtures")
 	if err != nil {
 		return err
@@ -95,6 +96,16 @@ func run(fixtureList, condList, agentList string, runs, par int, out string, dry
 	names, err := fixtureNames(root, fixtureList)
 	if err != nil {
 		return err
+	}
+	if repoList != "" {
+		names = nil
+		for _, r := range split(repoList) {
+			abs, err := filepath.Abs(r)
+			if err != nil {
+				return err
+			}
+			names = append(names, abs)
+		}
 	}
 	// Paths must not leak the fixture or the condition to the agent: it sees its working directory.
 	work, err := os.MkdirTemp("", "ws-")
@@ -118,8 +129,10 @@ func run(fixtureList, condList, agentList string, runs, par int, out string, dry
 	}
 	var jobs []job
 	for _, name := range names {
-		exp, err := loadExpected(filepath.Join(root, name, "expected.json"))
-		if err != nil {
+		label, exp := name, Expected{}
+		if filepath.IsAbs(name) {
+			label = "real:" + filepath.Base(name) // no known answer: graded by hand
+		} else if exp, err = loadExpected(filepath.Join(root, name, "expected.json")); err != nil {
 			return err
 		}
 		for _, cond := range split(condList) {
@@ -132,9 +145,9 @@ func run(fixtureList, condList, agentList string, runs, par int, out string, dry
 					dir := filepath.Join(work, fmt.Sprintf("%03d", len(jobs)), "project")
 					prompt, err := prepare(root, name, cond, dir)
 					if err != nil {
-						return fmt.Errorf("%s/%s: %v", name, cond, err)
+						return fmt.Errorf("%s/%s: %v", label, cond, err)
 					}
-					jobs = append(jobs, job{name, cond, dir, prompt, exp, ag, r})
+					jobs = append(jobs, job{label, cond, dir, prompt, exp, ag, r})
 				}
 			}
 		}
@@ -190,11 +203,19 @@ func run(fixtureList, condList, agentList string, runs, par int, out string, dry
 	return nil
 }
 
-// prepare builds the fixture into dir and returns the prompt for the condition.
+// prepare builds the fixture (or clones the real repo at an absolute path) into dir and returns
+// the prompt for the condition.
 func prepare(root, name, cond, dir string) (string, error) {
-	cmd := exec.Command("bash", filepath.Join(root, name, "build.sh"), dir)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("build.sh: %v\n%s", err, out)
+	real := filepath.IsAbs(name)
+	if real {
+		if err := cloneRepo(name, dir); err != nil {
+			return "", err
+		}
+	} else {
+		cmd := exec.Command("bash", filepath.Join(root, name, "build.sh"), dir)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return "", fmt.Errorf("build.sh: %v\n%s", err, out)
+		}
 	}
 	switch cond {
 	case "none":
@@ -202,6 +223,16 @@ func prepare(root, name, cond, dir string) (string, error) {
 	case "docs":
 		return docsPreamble + task, nil
 	case "relai":
+		if real {
+			// A real repo keeps its own AGENTS.md and notes, if any: this measures an uncurated
+			// adoption, just the handoff.
+			h, err := handoff.Build(dir, handoff.DefaultOptions())
+			if err != nil {
+				return "", err
+			}
+			return "Session start context (SessionStart hook):\n\n--- AGENTS.md ---\n" + agentsMD +
+				"\n--- relai handoff ---\n" + h + "\n---\n\n" + task, nil
+		}
 		notes, err := os.ReadFile(filepath.Join(root, name, "notes.md"))
 		if err != nil {
 			return "", err
@@ -231,6 +262,33 @@ func prepare(root, name, cond, dir string) (string, error) {
 	}
 	return "", fmt.Errorf("unknown condition %q", cond)
 }
+
+// cloneRepo copies a real repo for an agent run: tracked files only (no untracked secrets), the
+// Beads database, no remote (a stray `git push` must not reach the original) and no project
+// settings (their hooks would add context the conditions do not control).
+func cloneRepo(src, dir string) error {
+	steps := [][]string{
+		{"git", "clone", "-q", "--no-hardlinks", src, dir},
+		{"git", "-C", dir, "remote", "remove", "origin"},
+	}
+	if exists(filepath.Join(src, ".beads")) {
+		steps = append(steps, []string{"cp", "-a", filepath.Join(src, ".beads") + "/.", filepath.Join(dir, ".beads")})
+	}
+	for _, f := range []string{".claude/settings.json", ".claude/settings.local.json"} {
+		if exists(filepath.Join(dir, f)) || exists(filepath.Join(src, f)) {
+			steps = append(steps, []string{"git", "-C", dir, "update-index", "--skip-worktree", f},
+				[]string{"rm", "-f", filepath.Join(dir, f)})
+		}
+	}
+	for _, s := range steps {
+		if out, err := exec.Command(s[0], s[1:]...).CombinedOutput(); err != nil && s[1] != "-C" {
+			return fmt.Errorf("%v: %v %s", s, err, out)
+		}
+	}
+	return nil
+}
+
+func exists(p string) bool { _, err := os.Stat(p); return err == nil }
 
 func gitIn(dir string, args ...string) ([]byte, error) {
 	const when = "2026-06-30T10:00:00Z" // after every fixture commit, fixed for reproducibility
@@ -286,7 +344,7 @@ func runClaude(ag agent, dir, prompt string) Result {
 func Summary(rs []Result) string {
 	type key struct{ f, c, a string }
 	type acc struct {
-		n, ok       int
+		n, ok, ung  int
 		in, turns   int
 		cost        float64
 		traps, errs []string
@@ -308,9 +366,12 @@ func Summary(rs []Result) string {
 		a.in += r.InputTok
 		a.turns += r.Turns
 		a.cost += r.CostUSD
-		if r.Correct {
+		switch {
+		case r.Correct:
 			a.ok++
-		} else if r.Trap != "" {
+		case r.Trap == ungraded:
+			a.ung++
+		case r.Trap != "":
 			a.traps = append(a.traps, r.Trap)
 		}
 	}
@@ -337,8 +398,12 @@ func Summary(rs []Result) string {
 			fmt.Fprintf(&b, "| %s | %s | %s | – | – | – | – | %s |\n", k.f, k.a, k.c, notes)
 			continue
 		}
-		fmt.Fprintf(&b, "| %s | %s | %s | %d/%d | %d | %.1f | $%.3f | %s |\n",
-			k.f, k.a, k.c, a.ok, a.n, a.in/a.n, float64(a.turns)/float64(a.n), a.cost/float64(a.n), notes)
+		correct := fmt.Sprintf("%d/%d", a.ok, a.n-a.ung)
+		if a.ung == a.n {
+			correct = "by hand"
+		}
+		fmt.Fprintf(&b, "| %s | %s | %s | %s | %d | %.1f | $%.3f | %s |\n",
+			k.f, k.a, k.c, correct, a.in/a.n, float64(a.turns)/float64(a.n), a.cost/float64(a.n), notes)
 	}
 	return b.String()
 }

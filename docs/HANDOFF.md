@@ -20,7 +20,7 @@ no central service, no Backstage, no federation or SSO.
 | Area | State |
 |---|---|
 | Design | `docs/DESIGN.md` draft v0.2 (refocused 2026-11-03, no portal): problem, architecture (Mermaid), adoption levels, links between projects (`relai.yaml`), shared conventions, diagrams-as-models, market scan with verdict, 4-phase plan, open questions |
-| Experiment E2 | Harness in `eval/` (3 fixtures, 3 conditions, Claude Code headless). Pilot: all correct; handoff ≈ 7× fewer tokens than reading the docs on 2 fixtures, no gain on the in-flight OpenSpec change. See `eval/README.md` |
+| Experiment E2 | Harness in `eval/` (4 fixtures + real repos, 3 conditions, Claude Code headless). Handoff as correct as reading the docs on every fixture, 1.6–16× fewer tokens; F4 (stale tracker) forced the format to show blocked tasks and open tasks named in commits. See `eval/README.md` |
 | Market scan | Done 2026-11-02 (DESIGN §11). Verdict: partly covered by others, the gap is real — handoff standard, duplicate detection, conformance check, cross-repo contracts |
 | CLI | Go, stdlib only, `cmd/relai`: `init` (adds `AGENTS.md` or links it to `CLAUDE.md`, `relai.yaml`, `.relai/notes.md`; never overwrites), `handoff` (git + Beads + OpenSpec + notes, budget enforced by showing fewer items, `-o` to write a file), `version` |
 | Tests | `internal/handoff` (basics, budget enforced, not-a-repo), `internal/initrepo` (idempotent, never overwrites, CLAUDE.md link). All pass |
@@ -54,10 +54,10 @@ index, nothing of phases 2–4.
 
 Tracked in Beads — `bd ready` shows them; IDs in brackets.
 
-1. **E2 eval harness** [`relai-a7o.7`] — in progress, harness and 3 fixtures in `eval/`. Left:
-   harder fixtures (the pilot was too easy: every condition was right), the handoff improvement the
-   pilot asks for (name the next unchecked task of an active OpenSpec change), a second agent
-   vendor (Codex not installed), net-of-overhead token figures. Protocol in `eval/README.md`.
+1. **E2 eval harness** [`relai-a7o.7`] — harness, 4 fixtures and a real-repo mode in `eval/`;
+   results in `eval/README.md`. Correctness target met on all fixtures with the current format;
+   ≥ 10× fewer tokens only on 2 of 8 cells. Left: a second agent vendor (Codex not installed),
+   fixtures written by someone else.
 2. **Handoff format spec** [`relai-a7o.2`] — `spec/handoff.md`: required sections, ordering,
    budget rules and the truncation order (tasks, then commits, then notes), the "pointer" lines
    (`bd show`, `openspec show`), versioning of the format. Written from what E2 shows.
