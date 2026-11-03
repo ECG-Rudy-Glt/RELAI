@@ -80,8 +80,10 @@ func main() {
 		par      = flag.Int("parallel", 3, "concurrent agent runs")
 		out      = flag.String("out", "eval/results", "output directory")
 		dry      = flag.Bool("dry", false, "build the fixtures and print the prompts, run no agent")
+		boot     = flag.String("bootstrap", "", "real repos, condition relai: have this agent draft .relai/notes.md with `relai discover --prompt` first")
 	)
 	flag.Parse()
+	bootstrap = *boot
 	if err := run(*fixtures, *repos, *conds, *agentsF, *runs, *par, *out, *dry); err != nil {
 		fmt.Fprintln(os.Stderr, "e2:", err)
 		os.Exit(1)
@@ -203,6 +205,9 @@ func run(fixtureList, repoList, condList, agentList string, runs, par int, out s
 	return nil
 }
 
+// bootstrap names the agent that drafts .relai/notes.md in real repos before the relai condition.
+var bootstrap string
+
 // prepare builds the fixture (or clones the real repo at an absolute path) into dir and returns
 // the prompt for the condition.
 func prepare(root, name, cond, dir string) (string, error) {
@@ -225,7 +230,12 @@ func prepare(root, name, cond, dir string) (string, error) {
 	case "relai":
 		if real {
 			// A real repo keeps its own AGENTS.md and notes, if any: this measures an uncurated
-			// adoption, just the handoff.
+			// adoption, just the handoff — unless -bootstrap asks an agent to draft the notes.
+			if bootstrap != "" && !exists(filepath.Join(dir, ".relai", "notes.md")) {
+				if err := draftNotes(agents[bootstrap], dir); err != nil {
+					return "", err
+				}
+			}
 			h, err := handoff.Build(dir, handoff.DefaultOptions())
 			if err != nil {
 				return "", err
@@ -261,6 +271,29 @@ func prepare(root, name, cond, dir string) (string, error) {
 			"\n--- relai handoff ---\n" + h + "\n---\n\n" + task, nil
 	}
 	return "", fmt.Errorf("unknown condition %q", cond)
+}
+
+// draftNotes runs the agent with `relai discover --prompt` so it writes .relai/notes.md, as a
+// person adopting Relai in the middle of a project would, then commits the draft.
+func draftNotes(ag agent, dir string) error {
+	out, err := exec.Command("relai", "discover", "--prompt", dir).Output()
+	if err != nil {
+		return fmt.Errorf("relai discover: %v", err)
+	}
+	prompt := string(out) + "\nWrite the file now with the Write tool; the user reviews it afterwards.\n"
+	r := runAgent(ag, dir, prompt, "Read,Glob,Grep,Write,Bash(git:*),Bash(bd:*),Bash(gh:*),Bash(ls:*)", "Edit,NotebookEdit,WebFetch,WebSearch,Agent,Task")
+	fmt.Fprintf(os.Stderr, "bootstrap %s: %d input tokens, %d turns %s\n", dir, r.InputTok, r.Turns, r.Error)
+	if !exists(filepath.Join(dir, ".relai", "notes.md")) {
+		return fmt.Errorf("bootstrap: no .relai/notes.md written in %s", dir)
+	}
+	if out, err := gitIn(dir, "add", ".relai/notes.md"); err != nil {
+		return fmt.Errorf("git add: %v %s", err, out)
+	}
+	if out, err := gitIn(dir, "-c", "user.name=Sam Doe", "-c", "user.email=sam@example.com",
+		"commit", "-q", "-m", "chore: draft relai notes"); err != nil {
+		return fmt.Errorf("git commit: %v %s", err, out)
+	}
+	return nil
 }
 
 // cloneRepo copies a real repo for an agent run: tracked files only (no untracked secrets), the
@@ -301,6 +334,12 @@ func gitIn(dir string, args ...string) ([]byte, error) {
 // runClaude runs Claude Code headless, isolated from the user's settings, memory, hooks and MCP
 // servers, with read-only tools.
 func runClaude(ag agent, dir, prompt string) Result {
+	return runAgent(ag, dir, prompt,
+		"Read,Glob,Grep,Bash(git:*),Bash(bd:*),Bash(openspec:*),Bash(relai:*),Bash(ls:*),Bash(cat:*),Bash(head:*),Bash(find:*),Bash(wc:*)",
+		"Edit,Write,NotebookEdit,WebFetch,WebSearch,Agent,Task")
+}
+
+func runAgent(ag agent, dir, prompt, allowed, disallowed string) Result {
 	start := time.Now()
 	cmd := exec.Command("claude", "-p", prompt,
 		"--model", ag.model,
@@ -308,8 +347,8 @@ func runClaude(ag agent, dir, prompt string) Result {
 		"--setting-sources", "project",
 		"--strict-mcp-config",
 		"--no-session-persistence",
-		"--allowedTools", "Read,Glob,Grep,Bash(git:*),Bash(bd:*),Bash(openspec:*),Bash(relai:*),Bash(ls:*),Bash(cat:*),Bash(head:*),Bash(find:*),Bash(wc:*)",
-		"--disallowedTools", "Edit,Write,NotebookEdit,WebFetch,WebSearch,Agent,Task",
+		"--allowedTools", allowed,
+		"--disallowedTools", disallowed,
 	)
 	cmd.Dir = dir
 	out, err := cmd.Output()

@@ -114,8 +114,20 @@ contradictions between its sources, not hide them.
 
 Where the repo has structured sources (task graph, specs), the handoff gives the same answer for
 3–4× fewer tokens. Where it has none, the handoff is little more than `git log` and saves
-nothing: `relai init` should help start `.relai/notes.md`, and the GitHub Issues adapter
-(`relai-a7o.3`) matters.
+nothing.
+
+**Bootstrapping the notes** (`-bootstrap claude-sonnet`): Sonnet first drafts `.relai/notes.md`
+from `relai discover --prompt` (100–116k tokens, once per repo), then the relai condition runs again
+on the three repos without a tracker:
+
+| Repo profile | relai, no notes | relai, drafted notes | Answer |
+|---|---|---|---|
+| web app, no tracker | 113k (4) | 57k (2) | changed: a deployment prerequisite before the acceptance test |
+| consulting repo | 107k (4) | 70k (3) | same |
+| open-source app | 138k (4) | **29k (1)** | back to the answer of none/docs |
+
+The drafted notes pay for themselves after one or two sessions. Whether the changed answer is
+better is for the repo owner to judge.
 
 ### Status against the target
 

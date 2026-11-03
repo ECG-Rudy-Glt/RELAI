@@ -58,16 +58,19 @@ Tracked in Beads — `bd ready` shows them; IDs in brackets.
    results in `eval/README.md`. Correctness target met on all fixtures with the current format;
    ≥ 10× fewer tokens only on 2 of 8 cells. Left: a second agent vendor (Codex not installed),
    fixtures written by someone else.
-2. **Handoff format spec** [`relai-a7o.2`] — `spec/handoff.md`: required sections, ordering,
-   budget rules and the truncation order (tasks, then commits, then notes), the "pointer" lines
-   (`bd show`, `openspec show`), versioning of the format. Written from what E2 shows.
+2. **Handoff format spec** [`relai-a7o.2`] — draft v0.1 in `spec/handoff.md`, implemented (format
+   line, *Check first*, *Blocked*, `next:`, *Harness*). To close after the owner's review.
+   **Brownfield adoption** [`relai-a7o.9`] — `relai discover` (+ `--prompt` to draft notes) done;
+   `relai init` prints the inventory.
 3. **Manifest and layout spec** [`relai-a7o.1`] — `spec/relai.yaml.schema.json` + `spec/layout.md`
    (`.relai/` contents, `AGENTS.md` ↔ `CLAUDE.md`, `conventions:` pointer).
 4. **Session-start integrations** [`relai-a7o.6`] — a Claude Code SessionStart hook snippet and a
    generic shell snippet; document them in the README.
 5. **Release** [`relai-a7o.8`] — goreleaser binaries for Linux/macOS/Windows + one-line install,
    so people do not need Go.
-6. Then `relai validate` [`relai-a7o.5`], the GitHub Issues adapter when Beads is absent
+6. **Multi-repo strategy** [`relai-d6i`] — proposal in `docs/multi-repo.md` (hub repo, managed
+   blocks, `relai sync`/`check`, CI templates, pulled index, workspace handoff). Review before code.
+7. Then `relai validate` [`relai-a7o.5`], the GitHub Issues adapter when Beads is absent
    [`relai-a7o.3`], the "upstream changes" placeholder [`relai-a7o.4`].
 
 Phase 0 leftovers: check name availability (Go module path is fine; npm/PyPI/domain if needed),
