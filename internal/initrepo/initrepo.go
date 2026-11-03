@@ -71,7 +71,12 @@ func agentsTemplate(name string, hasClaude bool) string {
 
 Start here:
 1. Run `+"`relai handoff`"+` (current state, next tasks, decisions, pitfalls — a few hundred tokens).
-2. Load anything else only when you need it.
+   `+"`relai`"+` not installed or not found? Read `+"`.relai/notes.md`"+`, `+"`relai.yaml`"+`, and
+   (if present) `+"`.relai/index.json`"+` directly instead — they are plain files, no CLI required.
+2. Before building something another project might already provide, check
+   `+"`relai find <capability>`"+` (or read `+"`.relai/index.json`"+` directly) — don't duplicate
+   what already exists elsewhere.
+3. Load anything else only when you need it.
 %s
 ## Rules
 - Keep this file under 100 lines.

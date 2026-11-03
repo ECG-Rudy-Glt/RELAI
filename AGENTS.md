@@ -2,8 +2,13 @@
 
 Start here:
 1. Run `relai handoff` (current state, next tasks, decisions, pitfalls — a few hundred tokens).
-2. New to the project? Read `docs/HANDOFF.md` once.
-3. Load anything else only when you need it.
+   `relai` not installed or not found? Read `.relai/notes.md` and `relai.yaml` directly instead —
+   they are plain files, no CLI required.
+2. Before building something another project might already provide, check
+   `relai find <capability>` (or read a shared `.relai/index.json` directly, if your group has
+   one) — don't duplicate what already exists elsewhere.
+3. New to the project? Read `docs/HANDOFF.md` once.
+4. Load anything else only when you need it.
 
 ## Rules
 - Keep this file under 100 lines.
