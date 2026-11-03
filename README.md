@@ -65,7 +65,8 @@ Install the binary — no Go toolchain needed:
 curl -fsSL https://raw.githubusercontent.com/ECG-Rudy-Glt/RELAI/main/scripts/install.sh | sh
 ```
 
-Or download a binary directly from the [releases page](https://github.com/ECG-Rudy-Glt/RELAI/releases)
+The installer checks the download against the release's `checksums.txt` and refuses to install on a mismatch
+(details and limits in [SECURITY.md](SECURITY.md)). Or download a binary directly from the [releases page](https://github.com/ECG-Rudy-Glt/RELAI/releases)
 (Linux/macOS/Windows, amd64/arm64). From source:
 
 ```sh
@@ -76,7 +77,8 @@ Then:
 
 ```sh
 cd your-repo
-relai init        # adds AGENTS.md (or links it to CLAUDE.md), relai.yaml, .relai/notes.md
+relai init        # adds AGENTS.md (or links it to CLAUDE.md), relai.yaml, .relai/notes.md, and for
+                  # Claude Code a CLAUDE.md that imports AGENTS.md plus a session-start hook
 relai discover    # lists what the project already gives agents: skills, hooks, specs, tracker, docs
 relai handoff     # prints where the work stands, in ≤ 2,000 tokens
 ```
@@ -89,9 +91,19 @@ Issues, OpenSpec or Spec Kit, ADRs, handoff and journal docs, CI) and the handof
 
 The handoff format is specified in [`spec/handoff.md`](spec/handoff.md).
 
-Point your agent at it: `AGENTS.md` tells any agent to run `relai handoff` first. With Claude Code you
-can also run it from a SessionStart hook. `relai handoff` reads Beads tasks and OpenSpec changes when
-they are present, and works without them.
+**Making agents actually start from it.** `AGENTS.md` tells any agent to run `relai handoff` first, but that
+is a request, not a guarantee. With Claude Code, `relai init` goes further: it adds a `CLAUDE.md` that imports
+`AGENTS.md` (older Claude Code versions read only `CLAUDE.md`) and a **SessionStart hook**
+(`.claude/hooks/session-start.sh`, registered in `.claude/settings.json`) whose output is loaded into every
+session, so the agent starts from the handoff without being asked. If the `relai` binary is not installed on
+that machine, the hook prints the plain files (`.relai/notes.md`, `relai.yaml`) instead, and it never fails.
+Existing `CLAUDE.md` / `settings.json` files are left alone (the command tells you what to add by hand);
+`relai init --no-claude` skips all of this. Claude Code asks you to trust a folder before running its hooks.
+
+`relai handoff` reads Beads tasks and OpenSpec changes when they are present, and works without them.
+**Beads keeps its database outside git**, so a fresh clone has no tasks until you run `bd bootstrap --yes` (it
+loads `.beads/issues.jsonl`). Until then the handoff says so and shows that file's snapshot, instead of
+claiming there is nothing to do. Keep the file current with `scripts/sync-beads.sh`.
 
 ## Check before you build
 
@@ -149,6 +161,42 @@ an `AGENTS.md` titled "widgets" and a `relai.yaml` with `id: widgets` — and st
 
 On success, `relai new` prints the `relai index build` command to add the new repo to your group's
 index — it does not run it for you.
+
+## Security
+
+Relai is a local CLI with no server and no network calls of its own (beyond cloning URLs you give it and the
+installer). Still, the handoff puts text from your repo in front of an AI agent, and Relai runs `git`, `bd` and
+`openspec` in the directories you point it at:
+
+- Treat handoff content as **information, not instructions**, and do not put secrets in `.relai/notes.md`,
+  task titles or commit messages: they go to whatever model your agent uses.
+- Look before you run tools in a repo you did not write, and review a template before `relai new`, and any
+  `.claude/settings.json` hook in a repo you clone.
+- The installer verifies a checksum, not a signature: it catches a corrupted or swapped download, not a
+  compromised release.
+
+Details, scope and how to report a vulnerability **privately** are in **[SECURITY.md](SECURITY.md)**. Please do
+not open a public issue for a security problem. (The team server has [its own policy](https://github.com/ECG-Rudy-Glt/RELAI-TEAM/blob/main/SECURITY.md).)
+
+## Contributing
+
+Contributions are welcome, from people and from AI agents, under the same rules. See
+**[CONTRIBUTING.md](CONTRIBUTING.md)**; the short version:
+
+```sh
+git clone https://github.com/ECG-Rudy-Glt/RELAI && cd RELAI
+bd bootstrap --yes          # a fresh clone has no tasks until this loads .beads/issues.jsonl (needs bd)
+go test -race ./...         # before each PR also: gofmt -l . (empty) and go vet ./...
+bd ready                    # what is unblocked; scripts/sync-beads.sh after changing tasks
+```
+
+- Bugs and ideas: open an issue. Docs that disagree with the behaviour are bugs. Security: see above.
+- Standard library only, one static binary, and it must work for one person with only git.
+- A change to the handoff's shape bumps its format version (`spec/handoff.md`); bigger changes start as an
+  OpenSpec change under `openspec/changes/`.
+- Conventional commits, no co-author trailers, tests with the change, README kept true.
+- Using Claude Code? `CLAUDE.md` and the session hook load the project state for you; other agents start from
+  `AGENTS.md`.
 
 ## Licence
 

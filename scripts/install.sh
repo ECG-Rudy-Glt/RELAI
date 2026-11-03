@@ -5,7 +5,13 @@
 #   curl -fsSL https://raw.githubusercontent.com/ECG-Rudy-Glt/RELAI/main/scripts/install.sh | sh
 #
 # Env overrides: RELAI_INSTALL_DIR (default /usr/local/bin), RELAI_VERSION (default: latest),
-# RELAI_REPO, RELAI_BASE_URL (download from somewhere other than this repo's GitHub releases).
+# RELAI_REPO, RELAI_BASE_URL (download from somewhere other than this repo's GitHub releases; it must
+# also serve checksums.txt), RELAI_SKIP_VERIFY=1 (install without checking the checksum: not advised).
+#
+# The archive is checked against the release's checksums.txt before anything is installed, and the
+# install stops if it does not match. That catches a corrupted or swapped download; because the
+# checksums come from the same place as the archive, it does not protect against a compromised release
+# (use `gh attestation verify` for that, see SECURITY.md).
 set -eu
 
 repo="${RELAI_REPO:-ECG-Rudy-Glt/RELAI}"
@@ -37,16 +43,46 @@ fi
 
 archive="relai_${version}_${os}_${arch}.tar.gz"
 if [ -n "${RELAI_BASE_URL:-}" ]; then
-  url="$RELAI_BASE_URL/$archive"
+  base="$RELAI_BASE_URL"
 else
-  url="https://github.com/$repo/releases/download/v${version}/${archive}"
+  base="https://github.com/$repo/releases/download/v${version}"
 fi
+url="$base/$archive"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 echo "relai: downloading $url"
 curl -fsSL "$url" -o "$tmp/$archive"
+
+if [ "${RELAI_SKIP_VERIFY:-}" = "1" ]; then
+  echo "relai: WARNING: skipping checksum verification (RELAI_SKIP_VERIFY=1)" >&2
+else
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256() { sha256sum "$1" | cut -d' ' -f1; }
+  elif command -v shasum >/dev/null 2>&1; then
+    sha256() { shasum -a 256 "$1" | cut -d' ' -f1; }
+  else
+    echo "relai: cannot verify the download: neither sha256sum nor shasum is installed (set RELAI_SKIP_VERIFY=1 to install anyway)" >&2
+    exit 1
+  fi
+  if ! curl -fsSL "$base/checksums.txt" -o "$tmp/checksums.txt"; then
+    echo "relai: could not download $base/checksums.txt, so the archive cannot be verified (set RELAI_SKIP_VERIFY=1 to install anyway)" >&2
+    exit 1
+  fi
+  want=$(awk -v f="$archive" '$2 == f { print $1 }' "$tmp/checksums.txt")
+  if [ -z "$want" ]; then
+    echo "relai: $archive is not listed in checksums.txt: refusing to install" >&2
+    exit 1
+  fi
+  got=$(sha256 "$tmp/$archive")
+  if [ "$got" != "$want" ]; then
+    echo "relai: CHECKSUM MISMATCH for $archive (expected $want, got $got): refusing to install" >&2
+    exit 1
+  fi
+  echo "relai: checksum verified"
+fi
+
 tar -xzf "$tmp/$archive" -C "$tmp" relai
 
 if [ -w "$bin_dir" ] 2>/dev/null; then

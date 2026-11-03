@@ -7,11 +7,13 @@ package handoff
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -21,7 +23,7 @@ import (
 )
 
 // FormatVersion is the version of spec/handoff.md this package implements.
-const FormatVersion = "0.3"
+const FormatVersion = "0.4"
 
 // Options controls what goes into the handoff.
 type Options struct {
@@ -102,6 +104,8 @@ type sources struct {
 	commits      []string
 	dirty        []string
 	hasBeads     bool
+	beadsProblem string     // why .beads exists but its tasks cannot be read here ("" when they can)
+	snapshot     []snapTask // open tasks from .beads/issues.jsonl, used when the live ones cannot be read
 	ready, doing []task
 	blocked      []task
 	hasSpecs     bool
@@ -121,11 +125,20 @@ func collect(dir string) sources {
 	s.commits = lines(must(run(dir, "git", "log", "-20", "--format=%h %cs %s")))
 	s.dirty = lines(must(run(dir, "git", "status", "--short")))
 
-	if exists(filepath.Join(dir, ".beads")) && onPath("bd") {
-		s.hasBeads = true
-		_ = json.Unmarshal([]byte(must(run(dir, "bd", "ready", "--json"))), &s.ready)
-		_ = json.Unmarshal([]byte(must(run(dir, "bd", "list", "--status", "in_progress", "--json"))), &s.doing)
-		_ = json.Unmarshal([]byte(must(run(dir, "bd", "blocked", "--json"))), &s.blocked)
+	if exists(filepath.Join(dir, ".beads")) {
+		if !onPath("bd") {
+			s.beadsProblem = "the bd command is not installed"
+		} else if out, err := run(dir, "bd", "ready", "--json"); err != nil {
+			s.beadsProblem = beadsFailure(err)
+		} else {
+			s.hasBeads = true
+			_ = json.Unmarshal([]byte(out), &s.ready)
+			_ = json.Unmarshal([]byte(must(run(dir, "bd", "list", "--status", "in_progress", "--json"))), &s.doing)
+			_ = json.Unmarshal([]byte(must(run(dir, "bd", "blocked", "--json"))), &s.blocked)
+		}
+		if s.beadsProblem != "" {
+			s.snapshot = readSnapshot(dir)
+		}
 	}
 	if exists(filepath.Join(dir, "openspec")) && onPath("openspec") {
 		s.hasSpecs = true
@@ -193,7 +206,30 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 	if !s.degraded {
 		p("")
 		p("## Tasks")
-		if !s.hasBeads {
+		if !s.hasBeads && s.beadsProblem != "" {
+			p("Tasks cannot be read here: %s. Fresh clone? Run `bd bootstrap --yes` to load them from `.beads/issues.jsonl`.", s.beadsProblem)
+			if len(s.snapshot) > 0 {
+				p("From `.beads/issues.jsonl` (a snapshot kept in git, it may lag the live list):")
+				var doing, rest []snapTask
+				for _, t := range s.snapshot {
+					if t.Status == "in_progress" {
+						doing = append(doing, t)
+					} else {
+						rest = append(rest, t)
+					}
+				}
+				if len(doing) > 0 {
+					p("In progress:")
+					for _, t := range head(doing, tasks) {
+						p("- `%s` P%d %s", t.ID, t.Priority, short(t.Title, 100))
+					}
+				}
+				p("Open (%d total):", len(rest))
+				for _, t := range head(rest, tasks) {
+					p("- `%s` P%d %s", t.ID, t.Priority, short(t.Title, 100))
+				}
+			}
+		} else if !s.hasBeads {
 			p("(no task graph in this repo)")
 		} else {
 			if stale := namedInCommits(s); len(stale) > 0 {
@@ -336,6 +372,53 @@ func assigneeCount(doing []task) int {
 		}
 	}
 	return len(seen)
+}
+
+// snapTask is one open task read from the JSONL export Beads keeps in git.
+type snapTask struct {
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Status   string `json:"status"`
+	Priority int    `json:"priority"`
+	Type     string `json:"issue_type"`
+}
+
+// readSnapshot reads the unfinished, non-epic tasks of .beads/issues.jsonl, most urgent first. It
+// is the fallback for a clone whose Beads database has not been created yet, or a machine without bd.
+func readSnapshot(dir string) []snapTask {
+	b, err := os.ReadFile(filepath.Join(dir, ".beads", "issues.jsonl"))
+	if err != nil {
+		return nil
+	}
+	var out []snapTask
+	for _, l := range strings.Split(string(b), "\n") {
+		var t snapTask
+		if json.Unmarshal([]byte(l), &t) != nil || t.ID == "" {
+			continue
+		}
+		switch t.Status {
+		case "open", "in_progress", "blocked":
+			if t.Type != "epic" {
+				out = append(out, t)
+			}
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Priority != out[j].Priority {
+			return out[i].Priority < out[j].Priority
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out
+}
+
+// beadsFailure turns a failed `bd` run into a short reason, without echoing raw tool output.
+func beadsFailure(err error) string {
+	var ee *exec.ExitError
+	if errors.As(err, &ee) && strings.Contains(strings.ToLower(string(ee.Stderr)), "no beads database") {
+		return "this clone has no Beads database yet"
+	}
+	return "bd failed to read the tasks"
 }
 
 // namedInCommits lists open tasks whose ID appears in a recent commit subject: often work that was
