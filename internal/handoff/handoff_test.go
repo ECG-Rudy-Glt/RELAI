@@ -72,6 +72,18 @@ func TestNextTask(t *testing.T) {
 	}
 }
 
+func TestNamedInCommits(t *testing.T) {
+	s := sources{
+		commits: []string{"9101f28 2026-06-05 feat: run on Postgres 17 (pg-4)", "e6c30be 2026-06-04 feat: pg-40 column"},
+		ready:   []task{{ID: "pg-4", Title: "Migrate"}, {ID: "pg-5", Title: "Healthz"}},
+		blocked: []task{{ID: "pg-6", Title: "Backfill", BlockedBy: []string{"pg-4"}}},
+	}
+	got := namedInCommits(s)
+	if len(got) != 1 || !strings.HasPrefix(got[0], "`pg-4` Migrate, in 9101f28") {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestNotARepo(t *testing.T) {
 	if _, err := Build(t.TempDir(), DefaultOptions()); err == nil {
 		t.Fatal("expected an error outside a git repository")

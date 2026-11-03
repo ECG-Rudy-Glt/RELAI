@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -64,9 +65,10 @@ func Build(dir string, o Options) (string, error) {
 }
 
 type task struct {
-	ID       string `json:"id"`
-	Title    string `json:"title"`
-	Priority int    `json:"priority"`
+	ID        string   `json:"id"`
+	Title     string   `json:"title"`
+	Priority  int      `json:"priority"`
+	BlockedBy []string `json:"blocked_by"`
 }
 
 type change struct {
@@ -83,6 +85,7 @@ type sources struct {
 	dirty        []string
 	hasBeads     bool
 	ready, doing []task
+	blocked      []task
 	hasSpecs     bool
 	changes      []change
 	notes        []string
@@ -99,6 +102,7 @@ func collect(dir string) sources {
 		s.hasBeads = true
 		_ = json.Unmarshal([]byte(must(run(dir, "bd", "ready", "--json"))), &s.ready)
 		_ = json.Unmarshal([]byte(must(run(dir, "bd", "list", "--status", "in_progress", "--json"))), &s.doing)
+		_ = json.Unmarshal([]byte(must(run(dir, "bd", "blocked", "--json"))), &s.blocked)
 	}
 	if exists(filepath.Join(dir, "openspec")) && onPath("openspec") {
 		s.hasSpecs = true
@@ -152,6 +156,12 @@ func render(name string, s sources, commits, tasks, noteLines int) string {
 	if !s.hasBeads {
 		p("(no Beads task graph in this repo)")
 	} else {
+		if stale := namedInCommits(s); len(stale) > 0 {
+			p("Check first — still open but named in recent commits (done? close them):")
+			for _, l := range stale {
+				p("- %s", short(l, 110))
+			}
+		}
 		if len(s.doing) > 0 {
 			p("In progress:")
 			for _, t := range head(s.doing, tasks) {
@@ -161,6 +171,12 @@ func render(name string, s sources, commits, tasks, noteLines int) string {
 		p("Ready (unblocked, %d total):", len(s.ready))
 		for _, t := range head(s.ready, tasks) {
 			p("- `%s` P%d %s", t.ID, t.Priority, short(t.Title, 100))
+		}
+		if len(s.blocked) > 0 {
+			p("Blocked (%d total):", len(s.blocked))
+			for _, t := range head(s.blocked, tasks) {
+				p("- `%s` P%d %s — blocked by %s", t.ID, t.Priority, short(t.Title, 80), "`"+strings.Join(t.BlockedBy, "`, `")+"`")
+			}
 		}
 		p("Details: `bd show <id>`.")
 	}
@@ -196,6 +212,29 @@ func render(name string, s sources, commits, tasks, noteLines int) string {
 		}
 	}
 	return b.String()
+}
+
+// namedInCommits lists open tasks whose ID appears in a recent commit subject: often work that was
+// merged without closing the task, which a stale task list would otherwise present as to do.
+func namedInCommits(s sources) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, group := range [][]task{s.doing, s.ready, s.blocked} {
+		for _, t := range group {
+			if seen[t.ID] {
+				continue
+			}
+			seen[t.ID] = true
+			re := regexp.MustCompile(`(^|[^\w-])` + regexp.QuoteMeta(t.ID) + `($|[^\w-])`)
+			for _, c := range s.commits {
+				if re.MatchString(c) {
+					out = append(out, fmt.Sprintf("`%s` %s, in %s", t.ID, t.Title, c))
+					break
+				}
+			}
+		}
+	}
+	return out
 }
 
 // nextTask returns the first unchecked item ("- [ ] …") of an OpenSpec tasks.md, or "".
