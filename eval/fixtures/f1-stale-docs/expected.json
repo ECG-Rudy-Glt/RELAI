@@ -1,0 +1,10 @@
+{
+  "summary": "TODO.md is stale; the task graph and the journal say the worker pool comes next.",
+  "accept_ids": ["lc-5"],
+  "accept_patterns": ["(?i)worker.?pool", "(?i)parallel fetch"],
+  "traps": {
+    "lc-3": "followed the stale TODO (retries are already merged)",
+    "lc-4": "picked the report, which is blocked by the worker pool",
+    "lc-7": "picked robots.txt, deferred in the journal"
+  }
+}

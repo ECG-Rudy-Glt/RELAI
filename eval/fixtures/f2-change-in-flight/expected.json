@@ -1,0 +1,10 @@
+{
+  "summary": "Rate limiting (inv-7, OpenSpec add-rate-limiting) is in progress; next is the HTTP middleware, task 2.1.",
+  "accept_ids": ["inv-7"],
+  "accept_patterns": ["(?i)middleware", "(?i)\\b429\\b", "(?i)retry-after", "(?i)\\b2\\.1\\b"],
+  "traps": {
+    "inv-9": "picked the logging upgrade, which waits for rate limiting",
+    "inv-10": "picked the OpenAPI description",
+    "inv-11": "picked dark mode"
+  }
+}

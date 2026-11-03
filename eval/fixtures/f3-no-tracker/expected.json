@@ -1,0 +1,10 @@
+{
+  "summary": "No tracker. The last journal entry: the contact form is broken since the SMTP password rotation; the blog was dropped.",
+  "accept_ids": [],
+  "accept_patterns": ["(?i)contact.?form", "(?i)smtp", "(?i)contact\\.php"],
+  "traps": {
+    "(?i)\\bblog\\b": "followed the TODO list (the blog was dropped)",
+    "(?i)dark.?mode": "picked dark mode, low priority",
+    "(?i)gallery": "picked the gallery, low priority"
+  }
+}
