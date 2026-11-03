@@ -151,7 +151,10 @@ changed. Same rules as the single-repo handoff (deterministic, budgeted, pointer
 
 ## 9. What this is not
 
-- Not a service: the hub is a git repo, the index is a JSON file in it.
+- Not a service: the hub is a git repo, the index is a JSON file in it. This holds for Relai
+  itself. A team that also wants a live board and claim/release across repos can run the separate,
+  optional [RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM) server, which reads the same
+  repo contract; Relai does not depend on it.
 - Not a policy engine: `relai check` verifies the contract and drift, not code quality; existing
   linters stay where they are.
 - Not a replacement for plugin marketplaces: the hub can feed one.
