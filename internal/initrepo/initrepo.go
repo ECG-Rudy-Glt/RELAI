@@ -16,8 +16,23 @@ type Result struct {
 	Skipped []string
 }
 
+// Options controls what Init sets up.
+type Options struct {
+	// LinkClaude links a new AGENTS.md to an existing CLAUDE.md instead of writing a fresh one.
+	LinkClaude bool
+	// ClaudeCode also wires the repo for Claude Code: a CLAUDE.md that imports AGENTS.md and a
+	// session-start hook that loads the handoff, so the agent starts from the project's state.
+	ClaudeCode bool
+}
+
 // Init writes AGENTS.md (or links it to an existing CLAUDE.md), relai.yaml and .relai/notes.md.
 func Init(dir string, linkClaude bool) (Result, error) {
+	return InitWith(dir, Options{LinkClaude: linkClaude})
+}
+
+// InitWith is Init with options. It never overwrites a file that is already there.
+func InitWith(dir string, o Options) (Result, error) {
+	linkClaude := o.LinkClaude
 	var r Result
 	dir, err := filepath.Abs(dir)
 	if err != nil {
@@ -59,7 +74,81 @@ func Init(dir string, linkClaude bool) (Result, error) {
 		}
 		r.Created = append(r.Created, rel)
 	}
+	if o.ClaudeCode {
+		if err := wireClaudeCode(dir, &r); err != nil {
+			return r, err
+		}
+	}
 	return r, nil
+}
+
+// SessionStartScript is the hook Claude Code runs when a session starts: what it prints becomes part
+// of the session's context. It never fails, so a broken hook cannot block a session.
+const SessionStartScript = `#!/bin/sh
+# Runs when a Claude Code session starts (see .claude/settings.json). Whatever it prints becomes part of
+# the session's context, so the agent starts from the project's current state instead of guessing.
+# It never fails: a broken hook must not block a session.
+cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
+if command -v relai >/dev/null 2>&1 && relai handoff 2>/dev/null; then
+  exit 0
+fi
+echo "# Handoff (the relai CLI is not installed, so this is read from the plain files)"
+for f in .relai/notes.md relai.yaml; do
+  if [ -f "$f" ]; then echo; echo "## $f"; cat "$f"; fi
+done
+exit 0
+`
+
+// ClaudeSettings registers SessionStartScript as a SessionStart hook.
+const ClaudeSettings = `{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh" }
+        ]
+      }
+    ]
+  }
+}
+`
+
+// wireClaudeCode adds what Claude Code needs to start from the project's state. Claude Code reads
+// CLAUDE.md (newer versions also fall back to AGENTS.md, older ones do not), so a CLAUDE.md that
+// imports AGENTS.md is the version-proof way; the hook makes loading the handoff automatic instead of
+// something the agent has to remember to do.
+func wireClaudeCode(dir string, r *Result) error {
+	claude := filepath.Join(dir, "CLAUDE.md")
+	if exists(claude) {
+		r.Skipped = append(r.Skipped, "CLAUDE.md (already present: it should import AGENTS.md with a line `@AGENTS.md`, or be the file AGENTS.md links to)")
+	} else {
+		if err := write(claude, "@AGENTS.md\n"); err != nil {
+			return err
+		}
+		r.Created = append(r.Created, "CLAUDE.md")
+	}
+	hook := filepath.Join(dir, ".claude", "hooks", "session-start.sh")
+	settings := filepath.Join(dir, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(hook), 0o755); err != nil {
+		return err
+	}
+	if exists(hook) {
+		r.Skipped = append(r.Skipped, ".claude/hooks/session-start.sh (already present)")
+	} else {
+		if err := os.WriteFile(hook, []byte(SessionStartScript), 0o755); err != nil {
+			return err
+		}
+		r.Created = append(r.Created, ".claude/hooks/session-start.sh")
+	}
+	if exists(settings) {
+		r.Skipped = append(r.Skipped, ".claude/settings.json (already present: add a SessionStart hook that runs .claude/hooks/session-start.sh yourself)")
+	} else {
+		if err := write(settings, ClaudeSettings); err != nil {
+			return err
+		}
+		r.Created = append(r.Created, ".claude/settings.json")
+	}
+	return nil
 }
 
 func agentsTemplate(name string, hasClaude bool) string {

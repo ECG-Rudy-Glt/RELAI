@@ -1,6 +1,8 @@
 # relai — instructions for AI agents
 
 Start here:
+0. Fresh clone? The tasks live in Beads, outside git: run `bd bootstrap --yes` once to load them
+   from `.beads/issues.jsonl` (needs `bd`). Without it `bd list` is empty.
 1. Run `relai handoff` (current state, next tasks, decisions, pitfalls — a few hundred tokens).
    `relai` not installed or not found? Read `.relai/notes.md` and `relai.yaml` directly instead —
    they are plain files, no CLI required.
@@ -13,6 +15,9 @@ Start here:
 ## Rules
 - Keep this file under 100 lines.
 - Record decisions and pitfalls in `.relai/notes.md`, not in chat.
+- After creating, updating or closing tasks, run `scripts/sync-beads.sh` and commit
+  `.beads/issues.jsonl`: that file is the copy of the task list other people get when they clone.
+- Every `bd` run rewrites ~3 MiB of its database on disk: never run it on a timer or in a loop.
 
 ## This repo
 - Go, standard library only unless a dependency is clearly worth it. Single static binary.

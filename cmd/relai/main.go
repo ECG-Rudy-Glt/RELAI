@@ -23,7 +23,8 @@ var version = "dev" // set at build time: -ldflags "-X main.version=v0.1.0"
 const usage = `relai — pass the baton between people and their AI agents
 
 Usage:
-  relai init [dir]       add AGENTS.md, relai.yaml and .relai/notes.md (never overwrites)
+  relai init [dir]       add AGENTS.md, relai.yaml, .relai/notes.md, and for Claude Code a CLAUDE.md and a
+                         session-start hook that loads the handoff (never overwrites; --no-claude skips the last two)
   relai handoff [dir]    print the current state of the work (≤ 2,000 tokens by default)
   relai discover [dir]   list what the project already gives agents (skills, hooks, specs, docs…);
                          --prompt prints instructions for your agent to draft .relai/notes.md
@@ -50,8 +51,9 @@ func main() {
 	case "init":
 		fs := flag.NewFlagSet("init", flag.ExitOnError)
 		noLink := fs.Bool("no-link", false, "write a new AGENTS.md instead of linking it to an existing CLAUDE.md")
+		noClaude := fs.Bool("no-claude", false, "do not add CLAUDE.md and the Claude Code session-start hook")
 		_ = fs.Parse(os.Args[2:])
-		r, err := initrepo.Init(dirArg(fs), !*noLink)
+		r, err := initrepo.InitWith(dirArg(fs), initrepo.Options{LinkClaude: !*noLink, ClaudeCode: !*noClaude})
 		exitOn(err)
 		for _, c := range r.Created {
 			fmt.Println("created ", c)

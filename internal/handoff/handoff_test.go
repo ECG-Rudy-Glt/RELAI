@@ -170,7 +170,7 @@ func TestBuildBasics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.3)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
+	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.4)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("missing %q in:\n%s", want, doc)
 		}
@@ -308,5 +308,105 @@ func TestTeamHintIsFirstCutUnderBudget(t *testing.T) {
 	}
 	if !strings.Contains(cut, "Recent commits:") || !strings.Contains(cut, "add manifest") {
 		t.Errorf("cutting the hint should not cost commits:\n%s", cut)
+	}
+}
+
+// fakeBD puts a `bd` script first on PATH. Using it keeps these tests independent of the real tool.
+func fakeBD(t *testing.T, script string) {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "bd"), []byte("#!/bin/sh\n"+script+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+const snapshotJSONL = `{"_type":"issue","id":"p-1","title":"Fix the login redirect","status":"open","priority":1,"issue_type":"task"}
+{"_type":"issue","id":"p-2","title":"Write the migration","status":"in_progress","priority":0,"issue_type":"task"}
+{"_type":"issue","id":"p-3","title":"Old thing","status":"closed","priority":2,"issue_type":"task"}
+{"_type":"issue","id":"p-4","title":"The epic","status":"open","priority":0,"issue_type":"epic"}
+{"_type":"issue","id":"p-5","title":"Deferred idea","status":"deferred","priority":3,"issue_type":"task"}
+`
+
+func repoWithBeadsFiles(t *testing.T, jsonl string) string {
+	dir := gitRepo(t, 1)
+	_ = os.MkdirAll(filepath.Join(dir, ".beads"), 0o755)
+	if jsonl != "" {
+		_ = os.WriteFile(filepath.Join(dir, ".beads", "issues.jsonl"), []byte(jsonl), 0o644)
+	}
+	return dir
+}
+
+func TestFreshCloneWithoutDatabaseSaysSoInsteadOfZeroTasks(t *testing.T) {
+	fakeBD(t, `echo "Error: no beads database found" >&2; exit 1`)
+	doc, err := Build(repoWithBeadsFiles(t, snapshotJSONL), DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Tasks cannot be read here: this clone has no Beads database yet",
+		"`bd bootstrap --yes`",
+		"snapshot kept in git",
+		"`p-2` P0 Write the migration", // in progress, listed first
+		"Open (1 total):",
+		"`p-1` P1 Fix the login redirect",
+	} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("missing %q in:\n%s", want, doc)
+		}
+	}
+	for _, bad := range []string{"Ready (unblocked, 0 total)", "Old thing", "The epic", "Deferred idea"} {
+		if strings.Contains(doc, bad) {
+			t.Errorf("must not contain %q (a closed/epic/deferred task, or the misleading zero):\n%s", bad, doc)
+		}
+	}
+}
+
+func TestFreshCloneWithoutSnapshotStillSaysHowToLoadTasks(t *testing.T) {
+	fakeBD(t, `echo "Error: no beads database found" >&2; exit 1`)
+	doc, _ := Build(repoWithBeadsFiles(t, ""), DefaultOptions())
+	if !strings.Contains(doc, "Tasks cannot be read here") || !strings.Contains(doc, "bd bootstrap --yes") {
+		t.Errorf("no explanation without a snapshot:\n%s", doc)
+	}
+	if strings.Contains(doc, "snapshot kept in git") || strings.Contains(doc, "Ready (unblocked") {
+		t.Errorf("claims things it does not have:\n%s", doc)
+	}
+}
+
+func TestOtherBdFailuresAreReportedWithoutRawOutput(t *testing.T) {
+	fakeBD(t, `echo "panic: secret internal detail /home/x/token=abc" >&2; exit 2`)
+	doc, _ := Build(repoWithBeadsFiles(t, snapshotJSONL), DefaultOptions())
+	if !strings.Contains(doc, "bd failed to read the tasks") {
+		t.Errorf("failure not reported:\n%s", doc)
+	}
+	if strings.Contains(doc, "secret internal detail") || strings.Contains(doc, "token=abc") {
+		t.Errorf("raw tool output leaked into the handoff:\n%s", doc)
+	}
+}
+
+func TestBdNotInstalledFallsBackToTheSnapshot(t *testing.T) {
+	git, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("no git")
+	}
+	only := t.TempDir()
+	if err := os.Symlink(git, filepath.Join(only, "git")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", only) // git, and nothing else: no bd, no openspec
+	doc, _ := Build(repoWithBeadsFiles(t, snapshotJSONL), DefaultOptions())
+	if !strings.Contains(doc, "the bd command is not installed") || !strings.Contains(doc, "`p-1` P1 Fix the login redirect") {
+		t.Errorf("not installed case:\n%s", doc)
+	}
+}
+
+func TestHealthyBdIsUnchangedByTheFallback(t *testing.T) {
+	fakeBD(t, `case "$1" in ready) echo '[{"id":"live-1","title":"Live task","priority":1}]';; *) echo '[]';; esac`)
+	doc, _ := Build(repoWithBeadsFiles(t, snapshotJSONL), DefaultOptions())
+	if !strings.Contains(doc, "`live-1` P1 Live task") || !strings.Contains(doc, "Ready (unblocked, 1 total)") {
+		t.Errorf("live tasks not shown:\n%s", doc)
+	}
+	if strings.Contains(doc, "cannot be read") || strings.Contains(doc, "Fix the login redirect") {
+		t.Errorf("the snapshot must not appear when bd works:\n%s", doc)
 	}
 }
