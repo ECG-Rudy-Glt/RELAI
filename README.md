@@ -29,8 +29,17 @@ go install github.com/ECG-Rudy-Glt/RELAI/cmd/relai@latest   # Go ≥ 1.23
 
 cd your-repo
 relai init        # adds AGENTS.md (or links it to CLAUDE.md), relai.yaml, .relai/notes.md
+relai discover    # lists what the project already gives agents: skills, hooks, specs, tracker, docs
 relai handoff     # prints where the work stands, in ≤ 2,000 tokens
 ```
+
+**Adopting Relai in the middle of a project.** Nothing is moved or rewritten: `relai discover` finds
+the existing harness (`AGENTS.md`/`CLAUDE.md`, skills, commands, hooks, MCP servers, Beads or GitHub
+Issues, OpenSpec or Spec Kit, ADRs, handoff and journal docs, CI) and the handoff points to it.
+`relai discover --prompt` prints instructions for your own agent to draft `.relai/notes.md`
+(decisions, pitfalls, next step) from those docs; you review the draft and commit it.
+
+The handoff format is specified in [`spec/handoff.md`](spec/handoff.md).
 
 Point your agent at it: `AGENTS.md` tells any agent to run `relai handoff` first. With Claude Code you
 can also run it from a SessionStart hook. `relai handoff` reads Beads tasks and OpenSpec changes when

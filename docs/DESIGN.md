@@ -120,8 +120,12 @@ Principles:
   Forgejo/Gitea Actions).
 - **Agent-agnostic.** Everything an agent needs is reachable through `AGENTS.md`, skills and a CLI.
   Claude-specific wiring (hooks, plugin) is a thin optional layer.
-- **Brownfield first.** `relai init` detects what already exists (an `AGENTS.md`, a `CLAUDE.md`,
-  Beads, OpenSpec) and fills the gaps instead of overwriting.
+- **Brownfield first.** Most projects adopt Relai half-way through. `relai discover` inventories the
+  existing harness (instruction files, skills, commands, hooks, MCP servers, tracker, specs, ADRs,
+  handoff and journal docs, CI) and the handoff points to it in a *Harness* section; `relai init`
+  fills the gaps without overwriting; `relai discover --prompt` lets the user's own agent draft
+  `.relai/notes.md` from the existing docs, for a person to review. E2 on real repos showed the
+  handoff saves nothing on repos with no tracker and no notes, so this bootstrap matters.
 - **No secrets in the contract.** Manifests and handoffs are safe to share.
 
 ## 6. Links between projects
