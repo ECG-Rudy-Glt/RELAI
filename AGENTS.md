@@ -2,7 +2,8 @@
 
 Start here:
 1. Run `relai handoff` (current state, next tasks, decisions, pitfalls — a few hundred tokens).
-2. Load anything else only when you need it.
+2. New to the project? Read `docs/HANDOFF.md` once.
+3. Load anything else only when you need it.
 
 ## Rules
 - Keep this file under 100 lines.
