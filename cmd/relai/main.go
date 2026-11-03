@@ -6,11 +6,16 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/ECG-Rudy-Glt/RELAI/internal/discover"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/handoff"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/initrepo"
 )
+
+// defaultIndexPath is where `relai index build` writes and `relai find` reads by default.
+const defaultIndexPath = ".relai/index.json"
 
 var version = "dev" // set at build time: -ldflags "-X main.version=v0.1.0"
 
@@ -21,6 +26,11 @@ Usage:
   relai handoff [dir]    print the current state of the work (≤ 2,000 tokens by default)
   relai discover [dir]   list what the project already gives agents (skills, hooks, specs, docs…);
                          --prompt prints instructions for your agent to draft .relai/notes.md
+  relai index build [-o <path>] <list-file>
+                         read each repo path/URL in <list-file> and collect their relai.yaml
+                         into an index (default: .relai/index.json)
+  relai find [--index <path>] <capability>
+                         search the index for repos that already provide <capability>
   relai version
 
 Run "relai <command> -h" for options.
@@ -86,6 +96,56 @@ func main() {
 			for _, l := range inv.Lines(1 << 30) {
 				fmt.Println("- " + l)
 			}
+		}
+	case "index":
+		if len(os.Args) < 3 || os.Args[2] != "build" {
+			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] <list-file>")
+			os.Exit(2)
+		}
+		fs := flag.NewFlagSet("index build", flag.ExitOnError)
+		out := fs.String("o", defaultIndexPath, "write the index to this file")
+		_ = fs.Parse(os.Args[3:])
+		if fs.NArg() < 1 {
+			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] <list-file>")
+			os.Exit(2)
+		}
+		sources, err := index.ReadList(fs.Arg(0))
+		exitOn(err)
+		entries, skipped := index.Build(sources)
+		for _, sk := range skipped {
+			fmt.Fprintf(os.Stderr, "skipped %s: %s\n", sk.Source, sk.Reason)
+		}
+		if entries == nil {
+			entries = []index.Entry{}
+		}
+		b, err := json.MarshalIndent(entries, "", "  ")
+		exitOn(err)
+		exitOn(os.MkdirAll(filepath.Dir(*out), 0o755))
+		exitOn(os.WriteFile(*out, b, 0o644))
+		fmt.Printf("wrote %s (%d repos, %d skipped)\n", *out, len(entries), len(skipped))
+	case "find":
+		fs := flag.NewFlagSet("find", flag.ExitOnError)
+		idx := fs.String("index", defaultIndexPath, "path to the index built by `relai index build`")
+		_ = fs.Parse(os.Args[2:])
+		if fs.NArg() < 1 {
+			fmt.Fprintln(os.Stderr, "usage: relai find [--index <path>] <capability>")
+			os.Exit(2)
+		}
+		capability := fs.Arg(0)
+		b, err := os.ReadFile(*idx)
+		if err != nil {
+			fmt.Printf("no index at %s — build one first: relai index build -o %s <list-file>\n", *idx, *idx)
+			return
+		}
+		var entries []index.Entry
+		exitOn(json.Unmarshal(b, &entries))
+		found := index.Find(entries, capability)
+		if len(found) == 0 {
+			fmt.Printf("nothing in the index provides %q\n", capability)
+			return
+		}
+		for _, e := range found {
+			fmt.Printf("- %s (%s): %s\n", e.RelaiYAML.ID, e.Source, e.RelaiYAML.Summary)
 		}
 	case "version", "--version", "-v":
 		fmt.Println("relai", version)

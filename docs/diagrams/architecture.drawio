@@ -1,0 +1,58 @@
+<mxfile host="app.diagrams.net" modified="2026-11-03" agent="relai" version="24.0.0" type="device">
+  <diagram name="Architecture" id="relai-arch-1">
+    <mxGraphModel dx="900" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="zone" value="Repo contract (every repo)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="300" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="agents" value="AGENTS.md (L0, &lt;=100 lines)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="60" y="100" width="260" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="manifest" value="relai.yaml (provides / consumes)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="60" y="155" width="260" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="notes" value=".relai/notes.md (decisions, pitfalls)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="60" y="210" width="260" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="adapters" value="openspec/ + .beads/ (adapters, optional)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="60" y="265" width="260" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="handoff" value="relai handoff&#10;L1, &lt;=2k tokens, generated&#10;degraded mode if none of the above exists" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="440" y="80" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="e_zone_handoff" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="zone" target="handoff">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="index" value="index.json&#10;(relai.yaml of every known repo)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="440" y="220" width="320" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e_zone_index" value="relai index build" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=12;" edge="1" parent="1" source="zone" target="index">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="person" value="Person B + their agent" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="e_person_zone" value="git pull, read L0 + L1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=12;" edge="1" parent="1" source="person" target="zone">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_person_index" value="relai find: check before you build" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=12;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="person" target="index">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="planned" value="Planned, not built:&#10;shared conventions repo, golden path template" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="440" y="600" width="320" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="title" value="Relai — how it fits together" style="text;html=1;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="15" width="500" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

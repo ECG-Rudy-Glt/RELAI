@@ -66,6 +66,31 @@ func TestScan(t *testing.T) {
 	}
 }
 
+func TestHasCoreHarness(t *testing.T) {
+	bare := t.TempDir()
+	if Scan(bare).HasCoreHarness() {
+		t.Error("bare dir: want no core harness")
+	}
+
+	withAgents := t.TempDir()
+	write(t, withAgents, "AGENTS.md", "x")
+	if !Scan(withAgents).HasCoreHarness() {
+		t.Error("AGENTS.md present: want core harness")
+	}
+
+	withOpenSpec := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(withOpenSpec, "openspec"), 0o755)
+	if !Scan(withOpenSpec).HasCoreHarness() {
+		t.Error("openspec/ present: want core harness")
+	}
+
+	withBeads := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(withBeads, ".beads"), 0o755)
+	if !Scan(withBeads).HasCoreHarness() {
+		t.Error(".beads present: want core harness")
+	}
+}
+
 func TestLinesTruncates(t *testing.T) {
 	inv := Inventory{Groups: []Group{{Kind: Skills, Where: ".claude/skills", Items: []string{"a", "b", "c"}}}}
 	if got := inv.Lines(2)[0]; got != "Skills (.claude/skills): a, b, … (1 more)" {
