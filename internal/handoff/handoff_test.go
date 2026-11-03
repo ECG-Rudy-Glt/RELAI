@@ -34,7 +34,7 @@ func TestBuildBasics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "no Beads task graph", "no `.relai/notes.md` yet"} {
+	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.1)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("missing %q in:\n%s", want, doc)
 		}
