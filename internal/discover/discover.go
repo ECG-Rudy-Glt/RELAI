@@ -39,6 +39,35 @@ func (inv Inventory) Get(kind string) *Group {
 	return nil
 }
 
+// HasCoreHarness reports whether AGENTS.md/CLAUDE.md, OpenSpec, or Beads — the three sources
+// relai handoff's full mode is built from — is present. relai handoff falls back to degraded
+// mode when this is false, so there is one source of truth for "is a harness present" shared by
+// discover and handoff.
+func (inv Inventory) HasCoreHarness() bool {
+	if g := inv.Get(Instructions); g != nil {
+		for _, it := range g.Items {
+			if it == "AGENTS.md" || it == "CLAUDE.md" {
+				return true
+			}
+		}
+	}
+	if g := inv.Get(Specs); g != nil {
+		for _, it := range g.Items {
+			if strings.HasPrefix(it, "OpenSpec") {
+				return true
+			}
+		}
+	}
+	if g := inv.Get(Tasks); g != nil {
+		for _, it := range g.Items {
+			if strings.HasPrefix(it, "Beads") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Kinds, in display order.
 const (
 	Instructions = "Instructions"
