@@ -287,6 +287,16 @@ nothing but git**.
 and one CLI. Publish the handoff format as an open spec (with the AAIF as a natural home) once two or
 more tools implement it.
 
+**Team coordination is a separate project.** Relai stays git-only: no server, no running process.
+Some teams will want more: a *live* view across repos and claim/release so two agents do not start
+the same task. That is built as an optional, separate project,
+[RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM), which reads Relai's repo contract
+(`relai.yaml`, Beads, OpenSpec) through their own CLIs and files; Relai never depends on it. Two
+reasons for a separate repository rather than a mode or a second binary here: the claim "git only,
+no server" then stays literally true instead of "git only, except…", and the two projects can ship,
+version and fail independently, so a rough edge there never reflects on this one. `relai handoff`
+mentions it, in one line, only when the repo shows signs of parallel work.
+
 ## 12. Plan
 
 Each phase ends with acceptance criteria and tests. Phase 1 is useful on its own.
@@ -321,6 +331,9 @@ Each phase ends with acceptance criteria and tests. Phase 1 is useful on its own
 - [ ] `team/repo#task` references, "upstream changes" section in handoffs, impact tasks on
   breaking changes.
 - Acceptance: a breaking change in a provider shows up in 2 consumer handoffs end to end.
+
+> Team coordination (live board, claim/release, MCP tools) is tracked in
+> [RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM)'s own plan, not as a phase here.
 
 ### Phase 4 — golden path reference (optional)
 - [x] Scaffolding mechanism: `relai new <template> <dir>` (`golden-path-template` change) — the
