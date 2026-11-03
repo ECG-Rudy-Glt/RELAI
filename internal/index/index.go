@@ -153,6 +153,9 @@ func cloneShallow(url string) (string, error) {
 	}
 }
 
+// ParseManifest parses the relai.yaml subset described on parseManifest. It never fails.
+func ParseManifest(b []byte) Manifest { return parseManifest(b) }
+
 // parseManifest reads the small subset of YAML that relai.yaml uses: flat scalar keys, inline
 // bracket lists, and one-level block lists of single-key maps (provides:/consumes:). It never
 // fails; keys it cannot parse are left at their zero value, matching the project's "stdlib only,
