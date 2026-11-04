@@ -1,4 +1,4 @@
-# Handoff — Relai, end of session 3 (2026-11-03)
+# Handoff — Relai, written 2026-11-04
 
 > For whoever picks the project up next, human or agent. Read this once; afterwards the live
 > state comes from `relai handoff` (generated) and `.relai/notes.md` (decisions, pitfalls).
@@ -15,28 +15,24 @@ Guiding constraint, decided with the project owner: **easy first**. It must be u
 person or a small team with nothing but git — one binary, no server. **Not a portal** (DESIGN v0.2):
 no central service, no Backstage, no federation or SSO.
 
-## 2. Where things stand
+## 2. Where things stand (2026-11-04)
 
 | Area | State |
 |---|---|
-| Design | `docs/DESIGN.md` draft v0.2 (refocused 2026-11-03, no portal): problem, architecture (Mermaid), adoption levels, links between projects (`relai.yaml`), shared conventions, diagrams-as-models, market scan with verdict, 4-phase plan, open questions |
-| Experiment E2 | Harness in `eval/` (4 fixtures + real repos, 3 conditions, Claude Code headless). Handoff as correct as reading the docs on every fixture, 1.6–16× fewer tokens; F4 (stale tracker) forced the format to show blocked tasks and open tasks named in commits. See `eval/README.md` |
-| Market scan | Done 2026-11-02 (DESIGN §11). Verdict: partly covered by others, the gap is real — handoff standard, duplicate detection, conformance check, cross-repo contracts |
-| CLI | Go, stdlib only, `cmd/relai`: `init` (adds `AGENTS.md` or links it to `CLAUDE.md`, `relai.yaml`, `.relai/notes.md`; never overwrites), `handoff` (git + Beads + OpenSpec + notes, budget enforced by showing fewer items, `-o` to write a file; **degraded mode** when none of the three is present — git-only, recently-touched-files + TODO/FIXME), `discover`, `index build` / `find` (cross-repo capability search), `new <template> <dir>` (golden-path scaffolding), `version`. Handoff **format v0.3**: adds a one-line `Team signals:` hint pointing to RELAI-TEAM when two signals of parallel work are present (PR #4) |
-| Tests | `internal/handoff` (basics, budget enforced, not-a-repo, degraded mode: git section unchanged, no Tasks/Active changes, recent files + markers, truncation), `internal/initrepo` (idempotent, never overwrites, CLAUDE.md link), `internal/discover` (`HasCoreHarness`), `internal/index` (build, clone URL, find). All pass |
-| CI | GitHub Actions `ci.yml`: gofmt, vet, test — green on `main` |
-| Experiment E1 | On a real ~420-commit infra repo: cold start ≈ 1,700 tokens with `AGENTS.md` + handoff vs ≈ 96,000 reading the docs naively; the Go `relai handoff` output was ≈ 490 tokens |
-| Dogfooding | This repo has its own `AGENTS.md`, `relai.yaml`, `.relai/notes.md`, Beads (`relai-` prefix) and OpenSpec (`openspec/`, Claude skills in `.claude/`) |
+| Release | **v0.2.0** is published (6 platform archives + `checksums.txt`); `scripts/install.sh` verifies the SHA-256 before installing and never runs `sudo` on its own. `main` is ahead of it by the fixes below once they merge |
+| CLI | Go, stdlib only, `cmd/relai`: `init` (AGENTS.md, relai.yaml, `.relai/notes.md`, and for Claude Code a `CLAUDE.md` plus a SessionStart hook; never overwrites; `--no-claude`), `handoff`, `discover`, `index build` / `find`, `new <template> <dir>`, `version`. Flags may come before or after the arguments |
+| Handoff | Format **v0.5** (see `spec/handoff.md`, changelog at the end). Deterministic, about 2,000 tokens at most, degraded mode for repos with no harness, honest messages when `bd` or `openspec` cannot be read |
+| Tests | `go test ./...`: handoff (budget, degraded mode, hygiene, large inputs), initrepo, discover, index (every `provides` list shape), scaffold (symlinks, binary files, token substitution), CLI args. CI runs gofmt, vet, test |
+| Experiment E2 | `eval/README.md`. The gain is mostly in turns (1 instead of 4-30); in tokens it is 1.2x-3.4x in dollars, more in raw tokens, and nothing on repos with no tracker or notes. Do not quote the 56x figure (it is a size estimate, not an agent measurement) |
+| Test report | A hostile test of both projects on 2026-11-03 (`/home/rudy/relai-test-report/`, not in git). Its findings are tasks labelled `test-report-2026-11-03` in Beads; `bd list --label test-report-2026-11-03` |
+| RELAI-TEAM | The optional team layer, separate repo: [github.com/ECG-Rudy-Glt/RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM). Relai never depends on it. The handoff suggests it only when two signals of parallel work are present |
+| OpenSpec | All changes so far are archived; specs live in `openspec/specs/` |
 | Licence | Apache-2.0 |
-| OpenSpec | Both implemented changes are **archived** and their specs live in `openspec/specs/`: `cross-repo-index`, `git-only-handoff` (from `adoption-and-cross-repo-index`) and `golden-path-scaffold` (from `golden-path-template`). `team-server-mode` (docs-only positioning, `skip_specs`) is in review, PR #5; `handoff-team-hint` in PR #4 |
-| Release | **v0.1.0 is published** (6 platform archives + checksums, 2026-11-03); `scripts/install.sh` installs it (checked). It is the current `main` as of PR #2 (golden path included); PRs #3–#5 come after it, so tag a v0.1.1/v0.2.0 when they land |
-| RELAI-TEAM | The optional, separate team layer: [github.com/ECG-Rudy-Glt/RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM). Foundation merged (live cross-repo board, atomic claim/release, token auth, Docker); `relai-mcp` (MCP tools for agents) in its PR #2, verified with three real Claude Code agents. Relai never depends on it; docs position it (PR #5). `deployment-presets` deferred there on purpose |
 
-Not done yet: no `relai validate`; nothing of phases 2–4 of `docs/multi-repo.md` (hub, sync,
-managed blocks, `relai check`). The cross-repo index is a *flat* `index.json` built by one
-command and searched by another — not the hosted/scheduled hub design in `docs/multi-repo.md`,
-which stays a separate, larger, not-yet-decided proposal. The launch post is drafted
-(`docs/posts/`) but unreviewed and unpublished (`relai-a7e`).
+Not done yet: `relai validate`; phases 2-4 of `docs/multi-repo.md` (hub, `relai sync`, `relai check`
+-- those commands do not exist yet, the document is a proposal); a test with a non-Claude agent;
+the launch post (`docs/posts/`) is a draft and must be corrected against the test report before
+any publication (`relai-czl`).
 
 ## 3. Decisions already taken (do not reopen without a reason)
 
@@ -68,39 +64,10 @@ which stays a separate, larger, not-yet-decided proposal. The launch post is dra
 
 ## 4. Next steps, in order
 
-**Current priority — land the open PRs, then decide the next slice.**
-1. Review and merge, in any order: RELAI **#3** (AGENTS.md no-CLI fallback; branch protection asks
-   for an approval), **#4** (handoff Team-signals hint), **#5** (positioning docs); and
-   RELAI-TEAM **#2** (`relai-mcp`). Then archive `team-server-mode` once its §11/§12/§9 wording
-   is reviewed.
-2. Tag the next release once those land (the release workflow runs on a `vX.Y.Z` tag).
-3. Review and publish the launch post (`relai-a7e`).
-4. Pick from the backlog below; nothing blocks any order.
-
-Beads tasks not covered by that change — `bd ready` shows them; IDs in brackets:
-
-1. **E2 eval harness** [`relai-a7o.7`] — harness, 4 fixtures and a real-repo mode in `eval/`;
-   results in `eval/README.md`. Correctness target met on all fixtures with the current format;
-   ≥ 10× fewer tokens only on 2 of 8 cells. Left: a second agent vendor (Codex not installed),
-   fixtures written by someone else.
-2. **Handoff format spec** [`relai-a7o.2`] — draft v0.1 in `spec/handoff.md`, implemented (format
-   line, *Check first*, *Blocked*, `next:`, *Harness*). To close after the owner's review.
-   **Brownfield adoption** [`relai-a7o.9`] — `relai discover` (+ `--prompt` to draft notes) done;
-   `relai init` prints the inventory.
-3. **Manifest and layout spec** [`relai-a7o.1`] — `spec/relai.yaml.schema.json` + `spec/layout.md`
-   (`.relai/` contents, `AGENTS.md` ↔ `CLAUDE.md`, `conventions:` pointer).
-4. **Session-start integrations** [`relai-a7o.6`] — a Claude Code SessionStart hook snippet and a
-   generic shell snippet; document them in the README. (The shelved session-end `/clear` idea, see
-   §3 above, would mirror this task if ever picked back up.)
-5. **Multi-repo strategy, rest of it** [`relai-d6i`] — hub repo, managed blocks, `relai sync`,
-   `relai check` (contract/drift — not `relai find`, which the archived change covers), CI templates,
-   workspace handoff (`docs/multi-repo.md`). Only the index slice (`relai-d6i.4`'s
-   `build`/`find` half) exists; the rest is still just a proposal. Review before code.
-6. Then `relai validate` [`relai-a7o.5`], the GitHub Issues adapter when Beads is absent
-   [`relai-a7o.3`], the "upstream changes" placeholder [`relai-a7o.4`].
-
-Phase 0 leftovers: check name availability (Go module path is fine; npm/PyPI/domain if needed),
-add `CONTRIBUTING.md` and a code of conduct before inviting contributors.
+1. Land the test-report fixes (tasks `test-report-2026-11-03`, P1 first), then tag a release.
+2. Correct the launch post and the announcement against the measured numbers (`relai-czl`).
+3. Then the backlog: `bd ready`. Phase 2 (`relai-d6i.*`: hub, sync, check, workspace handoff),
+   `relai validate` (`relai-a7o.5`), the GitHub Issues adapter (`relai-a7o.3`).
 
 ## 5. How to resume
 

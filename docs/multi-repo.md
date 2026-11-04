@@ -1,6 +1,7 @@
 # Relai across many repos and CI systems
 
-> Status: proposal (2026-11-03), to be reviewed before implementation. Phase 2 of
+> Status: proposal (2026-11-03), to be reviewed before implementation. **The commands named here
+> (`relai sync`, `relai check`, `consumers`) do not exist yet.** Phase 2 of
 > [`DESIGN.md`](DESIGN.md). Same constraints as the rest of Relai: git only, one binary, no server,
 > no portal.
 
