@@ -134,12 +134,13 @@ exit 0
 
 // PostMergeHook runs the housekeeping after a pull or merge: it closes the tasks that merged commits say
 // they close and deletes fully merged local branches (see "relai tidy"). It does nothing without relai or
-// bd, is limited in time, and never fails the pull.
+// bd, is limited in time (RELAI_HOOK_TIMEOUT seconds, default 20: a pull never waits longer, and what it
+// did not finish the next run does), and never fails the pull.
 const PostMergeHook = `#!/bin/sh
 # relai: housekeeping after a merge or pull ("relai tidy --apply"). Installed by "relai init --hooks".
 # Never fails the merge: any problem here is ignored.
 command -v relai >/dev/null 2>&1 || exit 0
-limit=${RELAI_HOOK_TIMEOUT:-60}
+limit=${RELAI_HOOK_TIMEOUT:-20}
 if command -v timeout >/dev/null 2>&1; then
   timeout "$limit" relai tidy --apply --quiet || true
 else
