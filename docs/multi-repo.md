@@ -141,7 +141,7 @@ active changes, the `### Next` of the notes — plus *upstream changes* when a r
 changed. Same rules as the single-repo handoff (deterministic, budgeted, pointers to
 `relai handoff <repo>` for detail).
 
-**What exists today.** A first slice ships as `relai workspace` (2026-11-04): from the index built by
+**What exists today.** `relai index build --scan` and `relai discover --links` find the repositories of a folder and the mentions between them (evidence for a person or agent to confirm; `relai.yaml` gets an optional `links:`). A first slice of this view ships as `relai workspace` (2026-11-04): from the index built by
 `relai index build` it prints one budgeted block per indexed project (last commit, open and in-progress
 task counts, the top tasks, what it provides), reading files only and never running `bd`. Still planned
 from the text above: the `### Next` of the notes, the `next:` of active changes, the *Check first* lines

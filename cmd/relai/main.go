@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ECG-Rudy-Glt/RELAI/internal/discover"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/handoff"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/initrepo"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scaffold"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/scan"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/workspace"
 )
 
@@ -30,9 +32,14 @@ Usage:
   relai handoff [dir]    print the current state of the work (≤ 2,000 tokens by default)
   relai discover [dir]   list what the project already gives agents (skills, hooks, specs, docs…);
                          --prompt prints instructions for your agent to draft .relai/notes.md
-  relai index build [-o <path>] <list-file>
-                         read each repo path/URL in <list-file> and collect their relai.yaml
-                         into an index (default: .relai/index.json)
+  relai index build [-o <path>] [--scan <folder>] [<list-file>]
+                         read each repo path/URL in <list-file> (and/or every git repo in --scan <folder>)
+                         and collect their relai.yaml into an index (default: .relai/index.json)
+  relai discover --links <folder> [--propose | --prompt] [--json]
+                         mentions between the git repos of <folder> (strong: remote URL or relative path;
+                         weak: the name as a word). Evidence, not verified links; --propose prints a
+                         links: block per relai.yaml to check and paste yourself; --prompt prints instructions
+                         for your agent to verify each mention with you (nothing is ever written)
   relai find [--index <path>] <capability>
                          search the index for repos that already provide <capability>
   relai workspace [--index <path>] [--max-tokens N]
@@ -95,11 +102,30 @@ func main() {
 		fs := flag.NewFlagSet("discover", flag.ExitOnError)
 		prompt := fs.Bool("prompt", false, "print instructions for an agent to draft .relai/notes.md from what was found")
 		asJSON := fs.Bool("json", false, "print the inventory as JSON")
+		links := fs.Bool("links", false, "treat the argument as a folder of repositories and print the mentions between them")
+		propose := fs.Bool("propose", false, "with --links: print a links: block for each relai.yaml to check and paste yourself")
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		target := dirArg(fs)
 		if st, err := os.Stat(target); err != nil || !st.IsDir() {
 			fmt.Fprintf(os.Stderr, "relai: %s is not a directory\n", target)
 			os.Exit(1)
+		}
+		if *links || *propose {
+			repos, err := scan.Find(target)
+			exitOn(err)
+			ls := scan.Links(repos)
+			switch {
+			case *asJSON:
+				b, _ := json.MarshalIndent(map[string]any{"repos": repos, "links": ls}, "", "  ")
+				fmt.Println(string(b))
+			case *prompt:
+				fmt.Print(scan.Prompt(target, repos, ls))
+			case *propose:
+				fmt.Print(scan.Propose(repos, ls))
+			default:
+				fmt.Print(scan.Text(target, repos, ls))
+			}
+			return
 		}
 		inv := discover.Scan(target)
 		switch {
@@ -122,13 +148,34 @@ func main() {
 		}
 		fs := flag.NewFlagSet("index build", flag.ExitOnError)
 		out := fs.String("o", defaultIndexPath, "write the index to this file")
+		scanDir := fs.String("scan", "", "find the git repositories in this folder instead of (or in addition to) a list file")
 		_ = fs.Parse(reorderArgs(fs, os.Args[3:]))
-		if fs.NArg() < 1 {
-			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] <list-file>")
+		if fs.NArg() < 1 && *scanDir == "" {
+			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] [--scan <folder>] [<list-file>]")
 			os.Exit(2)
 		}
-		sources, err := index.ReadList(fs.Arg(0))
-		exitOn(err)
+		var sources []string
+		if fs.NArg() >= 1 {
+			var err error
+			sources, err = index.ReadList(fs.Arg(0))
+			exitOn(err)
+		}
+		if *scanDir != "" {
+			repos, err := scan.Find(*scanDir)
+			exitOn(err)
+			var without []string
+			for _, r := range repos {
+				sources = append(sources, r.Path)
+				if !r.Relai {
+					without = append(without, r.Name)
+				}
+			}
+			fmt.Printf("scan: %d repositories in %s, %d with a relai.yaml", len(repos), *scanDir, len(repos)-len(without))
+			if len(without) > 0 {
+				fmt.Printf("; without one (skipped, run `relai init` there to include them): %s", strings.Join(without, ", "))
+			}
+			fmt.Println()
+		}
 		entries, skipped := index.Build(sources)
 		for _, sk := range skipped {
 			fmt.Fprintf(os.Stderr, "skipped %s: %s\n", sk.Source, sk.Reason)

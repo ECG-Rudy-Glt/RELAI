@@ -141,3 +141,13 @@ func TestNoTaskListIsNotZeroTasks(t *testing.T) {
 		t.Errorf("unexpected '0 open':\n%s", doc)
 	}
 }
+
+func TestWorkspaceShowsWhoAProjectWorksWith(t *testing.T) {
+	root := t.TempDir()
+	e := project(t, root, "homelab", "2026-11-01", nil, fmt.Sprintf(tasks, "h"))
+	e.RelaiYAML.Links = []string{"portfolio", "shelfmark"}
+	doc := Render(Load([]index.Entry{e}), DefaultOptions())
+	if !strings.Contains(doc, "works with portfolio, shelfmark") {
+		t.Errorf("links not shown:\n%s", doc)
+	}
+}
