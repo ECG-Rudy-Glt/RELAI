@@ -143,3 +143,39 @@ func TestManyChangesStayWithinTheBudget(t *testing.T) {
 		t.Errorf("the cut should be announced:\n%s", doc)
 	}
 }
+
+func TestHandoffFromASubdirectoryIsTheRepositorys(t *testing.T) {
+	dir := gitRepo(t, 1)
+	sub := filepath.Join(dir, "pkg", "deep")
+	_ = os.MkdirAll(sub, 0o755)
+	root, err := Build(dir, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fromSub, err := Build(sub, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root != fromSub || strings.Contains(fromSub, "degraded") {
+		t.Errorf("handoff from a subdirectory differs from the root's:\n%s", fromSub)
+	}
+}
+
+func TestStateLineWordingForEmptyAndDetached(t *testing.T) {
+	empty := t.TempDir()
+	if out, err := exec.Command("git", "-C", empty, "init", "-q", "-b", "main").CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	doc, err := Build(empty, DefaultOptions())
+	if err != nil || !strings.Contains(doc, "no commits yet") || strings.Contains(doc, "at no commits") {
+		t.Errorf("empty repo: %v\n%s", err, doc)
+	}
+	dir := gitRepo(t, 1)
+	if out, err := exec.Command("git", "-C", dir, "checkout", "-q", "--detach").CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	doc, _ = Build(dir, DefaultOptions())
+	if !strings.Contains(doc, "Detached HEAD at ") || strings.Contains(doc, "Branch `?`") {
+		t.Errorf("detached:\n%s", doc)
+	}
+}
