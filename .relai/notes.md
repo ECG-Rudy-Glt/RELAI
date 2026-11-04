@@ -26,6 +26,8 @@
 - 2026-11-04 — Go toolchain pinned to 1.26.10 in go.mod (govulncheck: 0 reachable vulnerabilities; 1.23.x is out of support).
 - 2026-11-04 — Handoffs are computed on demand, not stored. Nothing runs when a task finishes: the session-start hook only exists in repos where `relai init` was run, and `scripts/sync-beads.sh` is manual. A git post-commit hook that refreshes the export was proposed, not built.
 
+- 2026-11-04 — Product goal (owner): drive several LINKED repos from one central place, for teams. Relai discovers (`index build --scan`, `discover --links`) and the agent + engineer confirm; RELAI-TEAM is the central place (task RELAI-TEAM-9os). A mention is evidence, never a declared link. The scan must follow symlinks: the owner's projects are symlinks into `projets/` (a first version found 9 of 16).
+
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->
 - `bd init` makes its own commit and edits AGENTS.md/.gitignore → use `--skip-agents --skip-hooks`, then `git reset --soft HEAD~1` and recommit.

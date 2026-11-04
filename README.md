@@ -129,6 +129,25 @@ active projects are named without detail, then only counted.
 `relai handoff` stays the answer for one project: it is the same idea at the scale of one repository, and it now asks `bd`
 only when the project changed since the last time (the answers are cached in your user cache directory, never in the repo).
 
+## Find your projects and how they relate
+
+You do not have to write the list of your projects by hand:
+
+```sh
+relai index build --scan ~/projects      # every git repo of the folder (symlinks included); says which need `relai init`
+relai discover --links ~/projects        # the mentions between them: who points at whom, and how strongly
+relai discover --links ~/projects --prompt   # instructions for your agent to check each mention with you
+relai discover --links ~/projects --propose  # a `links:` block per relai.yaml to check and paste yourself
+```
+
+The result is **evidence, not a verdict**. *Strong*: a repository holds the other's remote URL or a relative path to it (a
+deployment manifest pointing at an application). *Weak*: its name appears as a word (it can be an ordinary word, and names
+under four letters are not searched this way). Each line shows counts and up to three file paths, never content, and
+generated files (`node_modules`, `vendor`, lock files, `graphify-out`) are ignored. Nothing is ever written: the intended
+flow is that your agent verifies each mention against the files, shows you a table, and writes `links:` into `relai.yaml`
+only once you agree. `links:` (ids of the repositories this one works with) is read by the index and shown by
+`relai workspace`; `provides:`/`consumes:` still say *what*, `links:` says *who*.
+
 ## Check before you build
 
 Before writing a new capability, check whether one of your other projects already provides it, using

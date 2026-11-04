@@ -30,6 +30,9 @@ type Manifest struct {
 	Owners     []string     `json:"owners,omitempty"`
 	Provides   []Capability `json:"provides,omitempty"`
 	Consumes   []Capability `json:"consumes,omitempty"`
+	// Links are the ids of the repositories this one works with, declared by a person after checking
+	// the mentions `relai discover --links` found. Capabilities say what; links say who.
+	Links []string `json:"links,omitempty"`
 }
 
 // Entry is one indexed repo: where it came from and its parsed manifest.
@@ -205,6 +208,16 @@ func parseManifest(b []byte) (Manifest, []string) {
 		case "owners":
 			if rest != "" {
 				m.Owners = inlineList(rest)
+			}
+		case "links":
+			var caps []Capability
+			var w []string
+			i, caps, w = capabilityList(lines, i, rest)
+			for _, x := range w {
+				warn = append(warn, "links: "+x)
+			}
+			for _, c := range caps {
+				m.Links = append(m.Links, c.Capability)
 			}
 		case "provides", "consumes":
 			var caps []Capability

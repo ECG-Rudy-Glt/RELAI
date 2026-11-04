@@ -29,6 +29,7 @@ type Project struct {
 	ID, Summary, Source string
 	LastCommit          string // YYYY-MM-DD, "" when unknown
 	Provides            []string
+	Links               []string
 	Open, Doing         int
 	Top                 []handoff.TaskBrief // most urgent unfinished tasks
 	Remote              bool                // a clone URL: not read here
@@ -51,6 +52,7 @@ func Load(entries []index.Entry) []Project {
 		if p.ID == "" {
 			p.ID = e.Source
 		}
+		p.Links = e.RelaiYAML.Links
 		for _, c := range e.RelaiYAML.Provides {
 			p.Provides = append(p.Provides, c.Capability)
 		}
@@ -171,6 +173,9 @@ func render(ps []Project, tasks, full, caps int) string {
 				s += fmt.Sprintf(" (+%d)", len(pr.Provides)-caps)
 			}
 			facts = append(facts, s)
+		}
+		if caps > 0 && len(pr.Links) > 0 {
+			facts = append(facts, "works with "+strings.Join(pr.Links, ", "))
 		}
 		if len(facts) > 0 {
 			p("  %s", strings.Join(facts, " · "))
