@@ -218,8 +218,9 @@ files):
 | Agent reads instructions + TODO + journal + current plan ("naive") | ~96,000 |
 | `AGENTS.md` + generated handoff | ~1,700 (handoff alone ~560) |
 
-Estimate based on ~3.6 characters per token. The naive case is a worst case, but the order of
-magnitude (~50×) is the point.
+Estimate based on ~3.6 characters per token and on the *sizes* of the files, not on an agent run:
+it is an upper bound. E2 (below) measured real agents and found 1.6-16x in raw tokens, 1.2-3.4x in
+dollars, and no gain on repos with no tracker or notes.
 
 **E2 — handoff eval harness** ([`eval/`](../eval/README.md)): fixture repos with a known next step,
 agents run headless and cold in three conditions. Results and protocol in `eval/README.md`.

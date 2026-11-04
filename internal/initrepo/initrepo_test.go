@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestInitIsIdempotentAndNeverOverwrites(t *testing.T) {
@@ -151,4 +152,112 @@ func TestHookScriptNeverFailsAndFallsBackToPlainFiles(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Errorf("hook must never fail, got %v\n%s", err, out)
 	}
+}
+
+func TestSlug(t *testing.T) {
+	for in, want := range map[string]string{"My Widget-x": "my-widget-x", "日本語": "project", "": "project", "a_b.c": "a-b-c"} {
+		if got := Slug(in); got != want {
+			t.Errorf("Slug(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestInitIsAllOrNothingWhenRelaiIsAFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".relai"), []byte("in the way"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InitWith(dir, Options{ClaudeCode: true}); err == nil {
+		t.Fatal("expected an error")
+	}
+	for _, f := range []string{"AGENTS.md", "relai.yaml", "CLAUDE.md", ".claude"} {
+		if _, err := os.Lstat(filepath.Join(dir, f)); err == nil {
+			t.Errorf("%s was created before the error", f)
+		}
+	}
+}
+
+func TestClaudeSettingsHookHasATimeout(t *testing.T) {
+	if !strings.Contains(ClaudeSettings, `"timeout": 30`) {
+		t.Error("the generated SessionStart hook needs a timeout so a slow tool cannot block a session start")
+	}
+}
+
+func gitInit(t *testing.T, dir string) {
+	t.Helper()
+	if out, err := exec.Command("git", "-C", dir, "init", "-q", "-b", "main").CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+}
+
+func TestGitHookIsInstalledExecutableAndNeverOverwritten(t *testing.T) {
+	dir := t.TempDir()
+	gitInit(t, dir)
+	r, err := InitWith(dir, Options{GitHook: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hook := filepath.Join(dir, ".git", "hooks", "pre-commit")
+	st, err := os.Stat(hook)
+	if err != nil || st.Mode().Perm()&0o111 == 0 {
+		t.Fatalf("hook missing or not executable: %v", err)
+	}
+	if !strings.Contains(strings.Join(r.Created, " "), "pre-commit") {
+		t.Errorf("not reported: %v", r.Created)
+	}
+	_ = os.WriteFile(hook, []byte("#!/bin/sh\n# mine\n"), 0o755)
+	r, _ = InitWith(dir, Options{GitHook: true})
+	if b, _ := os.ReadFile(hook); !strings.Contains(string(b), "# mine") {
+		t.Error("an existing hook was overwritten")
+	}
+	if !strings.Contains(strings.Join(r.Skipped, " "), "pre-commit") {
+		t.Errorf("the skip is not reported: %v", r.Skipped)
+	}
+}
+
+func TestGitHookRefreshesTheExportInTheSameCommitAndNeverBlocks(t *testing.T) {
+	dir := t.TempDir()
+	gitInit(t, dir)
+	if _, err := InitWith(dir, Options{GitHook: true}); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.MkdirAll(filepath.Join(dir, ".beads"), 0o755)
+	_ = os.WriteFile(filepath.Join(dir, ".beads", "last-touched"), []byte("x-1"), 0o644)
+	bin := t.TempDir()
+	calls := filepath.Join(bin, "calls")
+	// a fake bd: "export -o FILE" writes one task with an owner e-mail
+	_ = os.WriteFile(filepath.Join(bin, "bd"), []byte("#!/bin/sh\necho x >> "+calls+"\nout=\"$3\"\necho '{\"id\":\"x-1\",\"owner\":\"me@example.com\",\"title\":\"t\"}' > \"$out\"\n"), 0o755)
+	env := append(os.Environ(), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"),
+		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+	commit := func(msg string) {
+		t.Helper()
+		for _, a := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", msg}} {
+			c := exec.Command("git", a...)
+			c.Dir, c.Env = dir, env
+			if out, err := c.CombinedOutput(); err != nil {
+				t.Fatalf("git %v: %v\n%s", a, err, out)
+			}
+		}
+	}
+	commit("first")
+	out, _ := exec.Command("git", "-C", dir, "show", "--stat", "--format=", "HEAD").Output()
+	if !strings.Contains(string(out), ".beads/issues.jsonl") {
+		t.Fatalf("the export is not in the commit that changed the tasks:\n%s", out)
+	}
+	b, _ := os.ReadFile(filepath.Join(dir, ".beads", "issues.jsonl"))
+	if strings.Contains(string(b), "owner") || !strings.Contains(string(b), `"id":"x-1"`) {
+		t.Errorf("export content wrong (the owner e-mail must be removed): %s", b)
+	}
+	// nothing touched bd since: the next commit must not ask it again
+	_ = os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644)
+	commit("second")
+	if c, _ := os.ReadFile(calls); strings.Count(string(c), "x") != 1 {
+		t.Errorf("bd was asked again although nothing changed: %q", c)
+	}
+	// a failing bd must not block the commit
+	_ = os.WriteFile(filepath.Join(bin, "bd"), []byte("#!/bin/sh\nexit 1\n"), 0o755)
+	_ = os.WriteFile(filepath.Join(dir, ".beads", "last-touched"), []byte("x-2"), 0o644)
+	future := time.Now().Add(time.Minute)
+	_ = os.Chtimes(filepath.Join(dir, ".beads", "last-touched"), future, future)
+	commit("third, bd fails")
 }

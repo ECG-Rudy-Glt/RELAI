@@ -1,6 +1,7 @@
 # Relai across many repos and CI systems
 
-> Status: proposal (2026-11-03), to be reviewed before implementation. Phase 2 of
+> Status: proposal (2026-11-03), to be reviewed before implementation. **The commands named here
+> (`relai sync`, `relai check`, `consumers`) do not exist yet.** Phase 2 of
 > [`DESIGN.md`](DESIGN.md). Same constraints as the rest of Relai: git only, one binary, no server,
 > no portal.
 
@@ -139,6 +140,12 @@ branch and state, the *Check first* lines, the top in-progress and ready tasks, 
 active changes, the `### Next` of the notes — plus *upstream changes* when a repo it consumes
 changed. Same rules as the single-repo handoff (deterministic, budgeted, pointers to
 `relai handoff <repo>` for detail).
+
+**What exists today.** A first slice ships as `relai workspace` (2026-11-04): from the index built by
+`relai index build` it prints one budgeted block per indexed project (last commit, open and in-progress
+task counts, the top tasks, what it provides), reading files only and never running `bd`. Still planned
+from the text above: the `### Next` of the notes, the `next:` of active changes, the *Check first* lines
+and *upstream changes*, which need the links between projects of phase 2.
 
 ## 8. Adopting it on existing repos
 

@@ -13,6 +13,7 @@ import (
 	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/initrepo"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scaffold"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/workspace"
 )
 
 // defaultIndexPath is where `relai index build` writes and `relai find` reads by default.
@@ -24,7 +25,8 @@ const usage = `relai — pass the baton between people and their AI agents
 
 Usage:
   relai init [dir]       add AGENTS.md, relai.yaml, .relai/notes.md, and for Claude Code a CLAUDE.md and a
-                         session-start hook that loads the handoff (never overwrites; --no-claude skips the last two)
+                         session-start hook that loads the handoff (never overwrites; --no-claude skips the last two;
+                         --hooks adds a git pre-commit hook that keeps .beads/issues.jsonl current)
   relai handoff [dir]    print the current state of the work (≤ 2,000 tokens by default)
   relai discover [dir]   list what the project already gives agents (skills, hooks, specs, docs…);
                          --prompt prints instructions for your agent to draft .relai/notes.md
@@ -33,6 +35,9 @@ Usage:
                          into an index (default: .relai/index.json)
   relai find [--index <path>] <capability>
                          search the index for repos that already provide <capability>
+  relai workspace [--index <path>] [--max-tokens N]
+                         one short overview of every project in the index: last activity, open tasks,
+                         what each provides (reads files only, never runs bd; default 800 tokens)
   relai new <template> <dir>
                          scaffold <dir> from <template> (a local path or clone URL), substituting
                          {{.RepoName}} etc. in its text files, then filling in anything the
@@ -52,8 +57,9 @@ func main() {
 		fs := flag.NewFlagSet("init", flag.ExitOnError)
 		noLink := fs.Bool("no-link", false, "write a new AGENTS.md instead of linking it to an existing CLAUDE.md")
 		noClaude := fs.Bool("no-claude", false, "do not add CLAUDE.md and the Claude Code session-start hook")
-		_ = fs.Parse(os.Args[2:])
-		r, err := initrepo.InitWith(dirArg(fs), initrepo.Options{LinkClaude: !*noLink, ClaudeCode: !*noClaude})
+		hooks := fs.Bool("hooks", false, "also install a git pre-commit hook that keeps .beads/issues.jsonl current")
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
+		r, err := initrepo.InitWith(dirArg(fs), initrepo.Options{LinkClaude: !*noLink, ClaudeCode: !*noClaude, GitHook: *hooks})
 		exitOn(err)
 		for _, c := range r.Created {
 			fmt.Println("created ", c)
@@ -76,7 +82,7 @@ func main() {
 		fs := flag.NewFlagSet("handoff", flag.ExitOnError)
 		fs.IntVar(&o.MaxTokens, "max-tokens", o.MaxTokens, "token budget for the whole handoff")
 		out := fs.String("o", "", "write to this file instead of stdout (e.g. .relai/handoff.md)")
-		_ = fs.Parse(os.Args[2:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		doc, err := handoff.Build(dirArg(fs), o)
 		exitOn(err)
 		if *out == "" {
@@ -89,8 +95,13 @@ func main() {
 		fs := flag.NewFlagSet("discover", flag.ExitOnError)
 		prompt := fs.Bool("prompt", false, "print instructions for an agent to draft .relai/notes.md from what was found")
 		asJSON := fs.Bool("json", false, "print the inventory as JSON")
-		_ = fs.Parse(os.Args[2:])
-		inv := discover.Scan(dirArg(fs))
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
+		target := dirArg(fs)
+		if st, err := os.Stat(target); err != nil || !st.IsDir() {
+			fmt.Fprintf(os.Stderr, "relai: %s is not a directory\n", target)
+			os.Exit(1)
+		}
+		inv := discover.Scan(target)
 		switch {
 		case *prompt:
 			fmt.Print(discover.Prompt(inv))
@@ -111,7 +122,7 @@ func main() {
 		}
 		fs := flag.NewFlagSet("index build", flag.ExitOnError)
 		out := fs.String("o", defaultIndexPath, "write the index to this file")
-		_ = fs.Parse(os.Args[3:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[3:]))
 		if fs.NArg() < 1 {
 			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] <list-file>")
 			os.Exit(2)
@@ -129,11 +140,16 @@ func main() {
 		exitOn(err)
 		exitOn(os.MkdirAll(filepath.Dir(*out), 0o755))
 		exitOn(os.WriteFile(*out, b, 0o644))
+		for _, e := range entries {
+			for _, w := range e.Warnings {
+				fmt.Fprintf(os.Stderr, "warning: %s: relai.yaml %s\n", e.Source, w)
+			}
+		}
 		fmt.Printf("wrote %s (%d repos, %d skipped)\n", *out, len(entries), len(skipped))
 	case "find":
 		fs := flag.NewFlagSet("find", flag.ExitOnError)
 		idx := fs.String("index", defaultIndexPath, "path to the index built by `relai index build`")
-		_ = fs.Parse(os.Args[2:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		if fs.NArg() < 1 {
 			fmt.Fprintln(os.Stderr, "usage: relai find [--index <path>] <capability>")
 			os.Exit(2)
@@ -154,15 +170,30 @@ func main() {
 		for _, e := range found {
 			fmt.Printf("- %s (%s): %s\n", e.RelaiYAML.ID, e.Source, e.RelaiYAML.Summary)
 		}
+	case "workspace":
+		fs := flag.NewFlagSet("workspace", flag.ExitOnError)
+		idx := fs.String("index", defaultIndexPath, "path to the index built by `relai index build`")
+		max := fs.Int("max-tokens", workspace.DefaultOptions().MaxTokens, "token budget for the overview")
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
+		b, err := os.ReadFile(*idx)
+		if err != nil {
+			fmt.Printf("no index at %s — build one first: relai index build -o %s <list-file>\n", *idx, *idx)
+			os.Exit(1)
+		}
+		var entries []index.Entry
+		exitOn(json.Unmarshal(b, &entries))
+		fmt.Print(workspace.Render(workspace.Load(entries), workspace.Options{MaxTokens: *max}))
 	case "new":
 		fs := flag.NewFlagSet("new", flag.ExitOnError)
-		_ = fs.Parse(os.Args[2:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		if fs.NArg() < 2 {
 			fmt.Fprintln(os.Stderr, "usage: relai new <template> <dir>")
 			os.Exit(2)
 		}
 		tplSrc, dir := fs.Arg(0), fs.Arg(1)
-		r, err := scaffold.New(tplSrc, dir, scaffold.Tokens{RepoName: filepath.Base(dir)})
+		abs, err := filepath.Abs(dir)
+		exitOn(err)
+		r, err := scaffold.New(tplSrc, dir, scaffold.Tokens{RepoName: initrepo.Slug(filepath.Base(abs))})
 		exitOn(err)
 		fmt.Printf("scaffolded %s from %s\n", dir, tplSrc)
 		for _, c := range r.Created {
