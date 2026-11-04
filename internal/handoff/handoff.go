@@ -23,7 +23,7 @@ import (
 )
 
 // FormatVersion is the version of spec/handoff.md this package implements.
-const FormatVersion = "0.4"
+const FormatVersion = "0.5"
 
 // Options controls what goes into the handoff.
 type Options struct {
@@ -180,6 +180,7 @@ type sources struct {
 	blocked      []task
 	hasSpecs     bool
 	changes      []change
+	specsProblem string // why openspec/ exists but its changes were listed from the files instead ("" when the tool worked)
 	notes        []string
 	harness      []string
 	degraded     bool
@@ -201,21 +202,39 @@ func collect(dir string) sources {
 		} else if out, err := run(dir, "bd", "ready", "--json"); err != nil {
 			s.beadsProblem = beadsFailure(err)
 		} else {
-			s.hasBeads = true
-			_ = json.Unmarshal([]byte(out), &s.ready)
-			_ = json.Unmarshal([]byte(must(run(dir, "bd", "list", "--status", "in_progress", "--json"))), &s.doing)
-			_ = json.Unmarshal([]byte(must(run(dir, "bd", "blocked", "--json"))), &s.blocked)
+			if err := json.Unmarshal([]byte(out), &s.ready); err != nil && strings.TrimSpace(out) != "" {
+				// Exit code 0 but not the JSON we asked for: say so, never show "Ready: 0".
+				s.beadsProblem = "bd returned output that could not be read"
+			} else {
+				s.hasBeads = true
+				_ = json.Unmarshal([]byte(must(run(dir, "bd", "list", "--status", "in_progress", "--json"))), &s.doing)
+				_ = json.Unmarshal([]byte(must(run(dir, "bd", "blocked", "--json"))), &s.blocked)
+			}
 		}
 		if s.beadsProblem != "" {
 			s.snapshot = readSnapshot(dir)
 		}
 	}
-	if exists(filepath.Join(dir, "openspec")) && onPath("openspec") {
-		s.hasSpecs = true
+	if exists(filepath.Join(dir, "openspec")) {
 		var out struct {
 			Changes []change `json:"changes"`
 		}
-		_ = json.Unmarshal([]byte(must(run(dir, "openspec", "list", "--json"))), &out)
+		switch {
+		case !onPath("openspec"):
+			s.specsProblem = "the openspec command is not installed"
+		default:
+			raw, err := run(dir, "openspec", "list", "--json")
+			if err != nil {
+				s.specsProblem = "openspec failed to list the changes"
+			} else if jerr := json.Unmarshal([]byte(raw), &out); jerr != nil {
+				s.specsProblem = "openspec returned output that could not be read"
+			} else {
+				s.hasSpecs = true
+			}
+		}
+		if s.specsProblem != "" {
+			out.Changes = specsOnDisk(dir) // same facts, read from the files, without the tool
+		}
 		s.changes = out.Changes
 		for i, c := range s.changes {
 			s.changes[i].Next = nextTask(filepath.Join(dir, "openspec", "changes", c.Name, "tasks.md"))
@@ -238,7 +257,7 @@ func collect(dir string) sources {
 // render builds the document. noteLines < 0 means "all notes".
 func render(name string, s sources, commits, tasks, harness, recentCap, markersCap, noteLines int) string {
 	var b strings.Builder
-	p := func(f string, a ...any) { fmt.Fprintf(&b, f+"\n", a...) }
+	p := func(f string, a ...any) { b.WriteString(cleanControl(fmt.Sprintf(f, a...)) + "\n") }
 
 	p("# Handoff — %s", name)
 	p("")
@@ -329,17 +348,25 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 
 		p("")
 		p("## Active changes (specs)")
+		if s.specsProblem != "" {
+			p("(%s: changes below are read from `openspec/changes/*/tasks.md`)", s.specsProblem)
+		}
 		switch {
-		case !s.hasSpecs:
+		case !s.hasSpecs && s.specsProblem == "":
 			p("(no OpenSpec changes in this repo)")
 		case len(s.changes) == 0:
 			p("No active change.")
 		default:
-			for _, c := range s.changes {
+			// The list is capped like the task lists: a repo with hundreds of changes must not
+			// blow the budget. The first changes are the ones shown, the rest is a count.
+			for _, c := range head(s.changes, tasks) {
 				p("- `%s` %d/%d tasks (%s)", c.Name, c.CompletedTasks, c.TotalTasks, c.Status)
 				if c.Next != "" {
 					p("  next: %s", short(c.Next, 100))
 				}
+			}
+			if len(s.changes) > tasks {
+				p("- … (%d more changes)", len(s.changes)-tasks)
 			}
 			p("Details: `openspec show <name>`.")
 		}
@@ -516,6 +543,36 @@ func namedInCommits(s sources) []string {
 	return out
 }
 
+// specsOnDisk lists the active OpenSpec changes by reading openspec/changes/*/tasks.md, for when
+// the openspec command is missing or broken. Archived changes are skipped.
+func specsOnDisk(dir string) []change {
+	entries, err := os.ReadDir(filepath.Join(dir, "openspec", "changes"))
+	if err != nil {
+		return nil
+	}
+	var out []change
+	for _, e := range entries {
+		if !e.IsDir() || e.Name() == "archive" {
+			continue
+		}
+		c := change{Name: e.Name(), Status: "from files"}
+		if b, err := os.ReadFile(filepath.Join(dir, "openspec", "changes", e.Name(), "tasks.md")); err == nil {
+			for _, l := range strings.Split(string(b), "\n") {
+				l = strings.TrimSpace(l)
+				switch {
+				case strings.HasPrefix(l, "- [x] "), strings.HasPrefix(l, "- [X] "):
+					c.CompletedTasks++
+					c.TotalTasks++
+				case strings.HasPrefix(l, "- [ ] "):
+					c.TotalTasks++
+				}
+			}
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
 // nextTask returns the first unchecked item ("- [ ] …") of an OpenSpec tasks.md, or "".
 func nextTask(path string) string {
 	b, err := os.ReadFile(path)
@@ -531,8 +588,16 @@ func nextTask(path string) string {
 }
 
 func run(dir, name string, args ...string) (string, error) {
+	if name == "git" {
+		// Read-only, as the spec promises: --no-optional-locks stops `git status` from refreshing
+		// .git/index; quotepath=off prints non-ASCII file names as they are, not as "caf\303\251".
+		args = append([]string{"--no-optional-locks", "-c", "core.quotepath=off"}, args...)
+	}
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
+	if name == "git" {
+		cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
+	}
 	done := make(chan struct{})
 	var out []byte
 	var err error
@@ -544,6 +609,26 @@ func run(dir, name string, args ...string) (string, error) {
 		_ = cmd.Process.Kill()
 		return "", fmt.Errorf("%s timed out", name)
 	}
+}
+
+// cleanControl drops terminal control characters (ESC, BEL, NUL...) from text that comes from
+// outside — commit subjects, file names, notes, task titles — so it cannot move the cursor, recolour
+// the terminal or smuggle escape sequences to whoever reads or pastes the handoff. Newline-free
+// text only: callers pass one line, a tab is kept.
+func cleanControl(s string) string {
+	if !strings.ContainsFunc(s, isControl) {
+		return s
+	}
+	return strings.Map(func(r rune) rune {
+		if isControl(r) {
+			return -1
+		}
+		return r
+	}, s)
+}
+
+func isControl(r rune) bool {
+	return (r < 0x20 && r != '\t' && r != '\n') || r == 0x7f || (r >= 0x80 && r < 0xa0)
 }
 
 func must(s string, err error) string {
