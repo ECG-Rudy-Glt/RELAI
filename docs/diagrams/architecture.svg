@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" width="980" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="Relai architecture: the repo contract, the generated handoff, the index and workspace view, discovery of linked repos, git hooks, and the optional RELAI-TEAM board">
+<title>Relai architecture</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#52606d"/></marker></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<rect x="30" y="50" width="310" height="250" rx="8" fill="#f4f8fe" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="42" y="72" font-size="13" font-weight="700" fill="#1f2933">Repo contract (every repo)</text>
+<rect x="48" y="92" width="274" height="40" rx="8" fill="#eef3fb" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="185.0" y="116.5" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">AGENTS.md (L0, ≤100 lines)</text>
+<rect x="48" y="140" width="274" height="40" rx="8" fill="#eef3fb" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="185.0" y="164.5" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">relai.yaml (id, provides, consumes, links)</text>
+<rect x="48" y="188" width="274" height="40" rx="8" fill="#eef3fb" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="185.0" y="212.5" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">.relai/notes.md (decisions, pitfalls)</text>
+<rect x="48" y="236" width="274" height="48" rx="8" fill="#f1eaf6" stroke="#9673a6" stroke-width="1.5"/>
+<text x="185.0" y="256.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">openspec/ + .beads/</text>
+<text x="185.0" y="273.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">read through adapters, optional</text>
+<rect x="30" y="336" width="310" height="56" rx="8" fill="#eaf5ec" stroke="#5d9c6a" stroke-width="1.5"/>
+<text x="185.0" y="360.0" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">git hooks (relai init --hooks)</text>
+<text x="185.0" y="377.0" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">pre-commit: task export · post-merge: relai tidy</text>
+<polyline points="185,336 185,300" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<rect x="30" y="432" width="310" height="52" rx="8" fill="#eaf5ec" stroke="#5d9c6a" stroke-width="1.5"/>
+<text x="185.0" y="454.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">relai new (golden path template)</text>
+<text x="185.0" y="471.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">a repo born with all of the above</text>
+<polyline points="185,432 185,392" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<rect x="390" y="50" width="270" height="56" rx="8" fill="#fdf3e1" stroke="#d79b00" stroke-width="1.5"/>
+<text x="525.0" y="74.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2933">relai handoff (≤2k tokens)</text>
+<text x="525.0" y="91.0" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">generated from files, not by an LLM</text>
+<polyline points="340,78 390,78" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<rect x="390" y="150" width="270" height="52" rx="8" fill="#fdf3e1" stroke="#d79b00" stroke-width="1.5"/>
+<text x="525.0" y="172.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1f2933">index.json (relai index build)</text>
+<text x="525.0" y="189.0" text-anchor="middle" font-size="12.5" font-weight="400" fill="#1f2933">the relai.yaml of every known project</text>
+<polyline points="340,176 390,176" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="365" y="168" text-anchor="middle" font-size="11.5" fill="#3e4c59" stroke="#fff" stroke-width="3" paint-order="stroke"></text>
+<rect x="390" y="246" width="270" height="64" rx="8" fill="#fdf3e1" stroke="#d79b00" stroke-width="1.5"/>
+<text x="525.0" y="265.5" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1f2933">relai workspace · relai find</text>
+<text x="525.0" y="282.5" text-anchor="middle" font-size="12.5" font-weight="400" fill="#1f2933">all projects on one page (≈400 tokens)</text>
+<text x="525.0" y="299.5" text-anchor="middle" font-size="12.5" font-weight="400" fill="#1f2933">check before you build</text>
+<polyline points="525.0,202 525.0,246" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<rect x="390" y="350" width="270" height="80" rx="8" fill="#fdf3e1" stroke="#d79b00" stroke-width="1.5"/>
+<text x="525.0" y="369.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1f2933">relai discover --links</text>
+<text x="525.0" y="386.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">repos of a folder (worktrees count once,</text>
+<text x="525.0" y="403.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">symlinks followed) and the mentions</text>
+<text x="525.0" y="420.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">between them: evidence, you confirm</text>
+<polyline points="525.0,310 525.0,350" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="390,390 356,390 356,205 340,205" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="380" y="448" text-anchor="start" font-size="11.5" fill="#3e4c59" stroke="#fff" stroke-width="3" paint-order="stroke">links: written once you agree</text>
+<rect x="700" y="50" width="260" height="56" rx="8" fill="#fff" stroke="#52606d" stroke-width="1.5"/>
+<text x="830.0" y="74.0" text-anchor="middle" font-size="12.5" font-weight="400" fill="#1f2933">Person + their agent</text>
+<text x="830.0" y="91.0" text-anchor="middle" font-size="12.5" font-weight="400" fill="#1f2933">git pull · read L0 + L1 · next task</text>
+<polyline points="660,78 700,78" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="660,262 680,262 680,92 700,92" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="676" y="123" text-anchor="end" font-size="11.5" fill="#3e4c59" stroke="#fff" stroke-width="3" paint-order="stroke">ask before building</text>
+<rect x="700" y="180" width="260" height="214" rx="8" fill="#fbeeee" stroke="#b85450" stroke-width="1.5"/>
+<text x="712" y="202" font-size="12.5" font-weight="700" fill="#1f2933">RELAI-TEAM (optional, self-hosted)</text>
+<rect x="714" y="214" width="232" height="44" rx="8" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+<text x="830.0" y="232.0" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">board + claims with leases</text>
+<text x="830.0" y="249.0" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">two agents never start the same task</text>
+<rect x="714" y="266" width="232" height="40" rx="8" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+<text x="830.0" y="282.0" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">MCP server for agents</text>
+<text x="830.0" y="299.0" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">web board, live updates</text>
+<rect x="714" y="314" width="232" height="64" rx="8" fill="#fff" stroke="#b85450" stroke-width="1.5"/>
+<text x="830.0" y="333.5" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">reads the same files and TODO.md;</text>
+<text x="830.0" y="350.5" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">a folder can feed it; issue mirror</text>
+<text x="830.0" y="367.5" text-anchor="middle" font-size="11.5" font-weight="400" fill="#1f2933">from GitHub and GitLab, read-only</text>
+<polyline points="830.0,180 830.0,106" fill="none" stroke="#52606d" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="838.0" y="150" text-anchor="start" font-size="11.5" fill="#3e4c59" stroke="#fff" stroke-width="3" paint-order="stroke">agents claim tasks</text>
+<rect x="700" y="432" width="260" height="52" rx="8" fill="#fff" stroke="#8a8f98" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="830.0" y="454.0" text-anchor="middle" font-size="12.5" font-weight="400" fill="#1f2933">Shared conventions repo</text>
+<text x="830.0" y="471.0" text-anchor="middle" font-size="12.5" font-weight="400" fill="#1f2933">planned, not built</text>
+<polyline points="700,458 680,458 680,516 376,516 376,222 340,222" fill="none" stroke="#52606d" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#a)"/>
+<text x="384" y="508" text-anchor="start" font-size="11.5" fill="#3e4c59" stroke="#fff" stroke-width="3" paint-order="stroke">referenced by relai.yaml</text>
+<text x="30" y="535" font-size="12" fill="#3e4c59">Solid = shipped, dashed = planned. The left and middle run from one static binary on local git repos: no server, no account.</text>
+</svg>
