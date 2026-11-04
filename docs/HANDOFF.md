@@ -20,7 +20,7 @@ no central service, no Backstage, no federation or SSO.
 | Area | State |
 |---|---|
 | Release | **v0.2.0** is published (6 platform archives + `checksums.txt`); `scripts/install.sh` verifies the SHA-256 before installing and never runs `sudo` on its own. `main` is ahead of it by the fixes below once they merge |
-| CLI | Go, stdlib only, `cmd/relai`: `init` (AGENTS.md, relai.yaml, `.relai/notes.md`, and for Claude Code a `CLAUDE.md` plus a SessionStart hook; never overwrites; `--no-claude`), `handoff`, `discover`, `index build` / `find`, `new <template> <dir>`, `version`. Flags may come before or after the arguments |
+| CLI | Go, stdlib only, `cmd/relai`: `init` (AGENTS.md, relai.yaml, `.relai/notes.md`, and for Claude Code a `CLAUDE.md` plus a SessionStart hook; never overwrites; `--no-claude`), `handoff`, `discover`, `index build` / `find`, `workspace` (one budgeted overview of all indexed projects, files only), `new <template> <dir>`, `version`. Flags may come before or after the arguments. `init --hooks` adds a git pre-commit hook that keeps `.beads/issues.jsonl` current |
 | Handoff | Format **v0.5** (see `spec/handoff.md`, changelog at the end). Deterministic, about 2,000 tokens at most, degraded mode for repos with no harness, honest messages when `bd` or `openspec` cannot be read |
 | Tests | `go test ./...`: handoff (budget, degraded mode, hygiene, large inputs), initrepo, discover, index (every `provides` list shape), scaffold (symlinks, binary files, token substitution), CLI args. CI runs gofmt, vet, test |
 | Experiment E2 | `eval/README.md`. The gain is mostly in turns (1 instead of 4-30); in tokens it is 1.2x-3.4x in dollars, more in raw tokens, and nothing on repos with no tracker or notes. Do not quote the 56x figure (it is a size estimate, not an agent measurement) |
@@ -66,21 +66,21 @@ any publication (`relai-czl`).
 
 1. Land the test-report fixes (tasks `test-report-2026-11-03`, P1 first), then tag a release.
 2. Correct the launch post and the announcement against the measured numbers (`relai-czl`).
-3. Then the backlog: `bd ready`. Phase 2 (`relai-d6i.*`: hub, sync, check, workspace handoff),
+3. Then the backlog: `bd ready`. Phase 2 (`relai-d6i.*`: hub, sync, check; the workspace view exists as `relai workspace`, its richer blocks need the links between projects),
    `relai validate` (`relai-a7o.5`), the GitHub Issues adapter (`relai-a7o.3`).
 
 ## 5. How to resume
 
 ```sh
 git clone https://github.com/ECG-Rudy-Glt/RELAI && cd RELAI
-go test ./... && go run ./cmd/relai handoff     # Go ≥ 1.23
+go test ./... && go run ./cmd/relai handoff     # Go ≥ 1.21 fetches the pinned toolchain
 bd ready                                         # Beads ≥ 1.3 (optional for reading the state)
 ```
 
 Tooling notes:
 - OpenSpec needs **Node ≥ 22.12**; distro Node 18 is too old.
-- Debian's Go is **1.19**; the project needs **1.23**. A toolchain is at `/opt/go1.23/bin`
-  (`export PATH=/opt/go1.23/bin:$PATH`). For a `relai` on your PATH:
+- Debian's Go is **1.19**, too old to fetch the toolchain pinned in `go.mod` (1.26.10). A Go 1.23 is at `/opt/go1.23/bin`
+  (`export PATH=/opt/go1.23/bin:$PATH`); it downloads the pinned one on first use. For a `relai` on your PATH:
   `go build -o ~/.local/bin/relai ./cmd/relai` (or use the v0.1.0 release).
 - `bd init` makes its own commit and edits `AGENTS.md`/`.gitignore`: use
   `--skip-agents --skip-hooks`, then undo its commit and recommit cleanly. After a

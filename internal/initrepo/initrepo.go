@@ -5,6 +5,7 @@ package initrepo
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -23,6 +24,9 @@ type Options struct {
 	// ClaudeCode also wires the repo for Claude Code: a CLAUDE.md that imports AGENTS.md and a
 	// session-start hook that loads the handoff, so the agent starts from the project's state.
 	ClaudeCode bool
+	// GitHook installs a git pre-commit hook that keeps .beads/issues.jsonl (the copy of the task
+	// list that lives in git, and what `relai workspace` reads) current, so it is never forgotten.
+	GitHook bool
 }
 
 // Init writes AGENTS.md (or links it to an existing CLAUDE.md), relai.yaml and .relai/notes.md.
@@ -90,7 +94,58 @@ func InitWith(dir string, o Options) (Result, error) {
 			return r, err
 		}
 	}
+	if o.GitHook {
+		if err := wireGitHook(dir, &r); err != nil {
+			return r, err
+		}
+	}
 	return r, nil
+}
+
+// PreCommitHook keeps the committed task export current. It runs in the commit that changes the tasks,
+// so the export travels with the work instead of lagging behind it. It asks bd only when bd wrote
+// since the last export (each bd run rewrites about 3 MiB of its database), does nothing without
+// Beads or bd, and never blocks a commit.
+const PreCommitHook = `#!/bin/sh
+# relai: keep .beads/issues.jsonl (the task list kept in git) current. Installed by "relai init --hooks".
+# Never blocks a commit: any problem here is ignored.
+[ -d .beads ] || exit 0
+command -v bd >/dev/null 2>&1 || exit 0
+exp=.beads/issues.jsonl
+if [ -f "$exp" ] && [ -f .beads/last-touched ] && [ ! .beads/last-touched -nt "$exp" ]; then exit 0; fi
+tmp=$(mktemp) || exit 0
+if bd export -o "$tmp" >/dev/null 2>&1; then
+  # drop the "owner" field: it is the creator's e-mail address
+  if sed -E 's/"owner":"[^"]*",//' "$tmp" > "$exp.tmp"; then mv "$exp.tmp" "$exp" && git add "$exp"; fi
+fi
+rm -f "$tmp" "$exp.tmp"
+exit 0
+`
+
+// wireGitHook writes the pre-commit hook unless one is already there (it is never overwritten).
+func wireGitHook(dir string, r *Result) error {
+	out, err := exec.Command("git", "-C", dir, "rev-parse", "--git-path", "hooks/pre-commit").Output()
+	if err != nil {
+		r.Skipped = append(r.Skipped, "git hook (not a git repository)")
+		return nil
+	}
+	path := strings.TrimSpace(string(out))
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(dir, path)
+	}
+	rel, _ := filepath.Rel(dir, path)
+	if exists(path) {
+		r.Skipped = append(r.Skipped, rel+" (already present: add a call to the task export yourself, see "+"`scripts/sync-beads.sh` in the Relai repository)")
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(path, []byte(PreCommitHook), 0o755); err != nil {
+		return err
+	}
+	r.Created = append(r.Created, rel)
+	return nil
 }
 
 // SessionStartScript is the hook Claude Code runs when a session starts: what it prints becomes part

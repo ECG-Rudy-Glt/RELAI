@@ -72,7 +72,7 @@ The installer checks the download against the release's `checksums.txt` and refu
 (Linux/macOS/Windows, amd64/arm64). From source:
 
 ```sh
-go install github.com/ECG-Rudy-Glt/RELAI/cmd/relai@latest   # Go ≥ 1.23
+go install github.com/ECG-Rudy-Glt/RELAI/cmd/relai@latest   # Go ≥ 1.21 fetches the pinned toolchain (1.26.10) by itself
 ```
 
 Then:
@@ -84,6 +84,11 @@ relai init        # adds AGENTS.md (or links it to CLAUDE.md), relai.yaml, .rela
 relai discover    # lists what the project already gives agents: skills, hooks, specs, tracker, docs
 relai handoff     # prints where the work stands, in ≤ 2,000 tokens
 ```
+
+Flags can go before or after the arguments (`relai init --no-claude dir` and `relai init dir --no-claude` are the same).
+`relai init --hooks` also installs a git **pre-commit hook** that keeps `.beads/issues.jsonl` (the copy of the task list
+that lives in git) current, in the very commit that changes the tasks. It asks `bd` only when `bd` wrote since the
+last export, never blocks a commit, and never overwrites a hook you already have.
 
 **Adopting Relai in the middle of a project.** Nothing is moved or rewritten: `relai discover` finds
 the existing harness (`AGENTS.md`/`CLAUDE.md`, skills, commands, hooks, MCP servers, Beads or GitHub
@@ -106,6 +111,23 @@ Existing `CLAUDE.md` / `settings.json` files are left alone (the command tells y
 **Beads keeps its database outside git**, so a fresh clone has no tasks until you run `bd bootstrap --yes` (it
 loads `.beads/issues.jsonl`). Until then the handoff says so and shows that file's snapshot, instead of
 claiming there is nothing to do. Keep the file current with `scripts/sync-beads.sh`.
+
+## One view of all your projects
+
+```sh
+relai index build repos.txt      # once: collect each project's relai.yaml (paths or clone URLs)
+relai workspace                  # ≈ 800 tokens: every project, most recently active first
+```
+
+For each indexed project `relai workspace` shows the date of its last commit, how many tasks are open and in progress,
+the most urgent ones, and what it provides. It reads files only (the index, each project's `.beads/issues.jsonl`, the
+last commit date) and never runs `bd`, so asking about twenty projects does not rewrite twenty databases. The task
+counts come from the committed copy of the task list and can lag the live one; the output says so. Projects given as
+clone URLs are listed but not read. Use `--max-tokens` to change the budget: detail is dropped first, then the least
+active projects are named without detail, then only counted.
+
+`relai handoff` stays the answer for one project: it is the same idea at the scale of one repository, and it now asks `bd`
+only when the project changed since the last time (the answers are cached in your user cache directory, never in the repo).
 
 ## Check before you build
 

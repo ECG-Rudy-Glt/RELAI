@@ -25,7 +25,8 @@ const usage = `relai — pass the baton between people and their AI agents
 
 Usage:
   relai init [dir]       add AGENTS.md, relai.yaml, .relai/notes.md, and for Claude Code a CLAUDE.md and a
-                         session-start hook that loads the handoff (never overwrites; --no-claude skips the last two)
+                         session-start hook that loads the handoff (never overwrites; --no-claude skips the last two;
+                         --hooks adds a git pre-commit hook that keeps .beads/issues.jsonl current)
   relai handoff [dir]    print the current state of the work (≤ 2,000 tokens by default)
   relai discover [dir]   list what the project already gives agents (skills, hooks, specs, docs…);
                          --prompt prints instructions for your agent to draft .relai/notes.md
@@ -56,8 +57,9 @@ func main() {
 		fs := flag.NewFlagSet("init", flag.ExitOnError)
 		noLink := fs.Bool("no-link", false, "write a new AGENTS.md instead of linking it to an existing CLAUDE.md")
 		noClaude := fs.Bool("no-claude", false, "do not add CLAUDE.md and the Claude Code session-start hook")
+		hooks := fs.Bool("hooks", false, "also install a git pre-commit hook that keeps .beads/issues.jsonl current")
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
-		r, err := initrepo.InitWith(dirArg(fs), initrepo.Options{LinkClaude: !*noLink, ClaudeCode: !*noClaude})
+		r, err := initrepo.InitWith(dirArg(fs), initrepo.Options{LinkClaude: !*noLink, ClaudeCode: !*noClaude, GitHook: *hooks})
 		exitOn(err)
 		for _, c := range r.Created {
 			fmt.Println("created ", c)

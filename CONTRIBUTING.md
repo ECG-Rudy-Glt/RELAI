@@ -16,7 +16,7 @@ can pass the baton between sessions and across repos. The rules below are the sa
 
 ## Set up
 
-You need Go 1.23+ and `git`. `bd` ([Beads](https://github.com/steveyegge/beads)) and `openspec` (Node
+You need Go 1.21+ (the module pins toolchain 1.26.10, which Go downloads by itself) and `git`. `bd` ([Beads](https://github.com/steveyegge/beads)) and `openspec` (Node
 22.12+) are optional: without them the code paths that use them are covered by tests with fake commands, but
 you will want them to try the real thing.
 
@@ -27,8 +27,8 @@ go build -o relai ./cmd/relai && ./relai handoff
 go test -race ./...
 ```
 
-On Debian/Ubuntu the packaged Go may be older than 1.23 (the module needs 1.23): install a current one rather
-than lowering `go.mod`.
+On Debian/Ubuntu the packaged Go may be older than 1.21 and unable to fetch the pinned toolchain: install a current
+one rather than lowering `go.mod`.
 
 If you use Claude Code, `CLAUDE.md` and a session-start hook load the project's handoff for you; other agents
 start from `AGENTS.md`.
