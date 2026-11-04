@@ -13,6 +13,8 @@ Relai is an open, agent-agnostic layer of files in git plus one CLI. No server, 
   and tasks) so whoever pulls the repo — and their agent — knows the next steps immediately;
 - **check before you build**: a project index (a plain git repo of `relai.yaml` files) to find what
   the other projects already provide before writing a duplicate;
+- **one view of all your projects** (`relai workspace`): last activity, open work and what each
+  provides, in about 800 tokens, from files only;
 - an optional **golden path**: a project template born with all of the above (`relai new`).
 
 Planned, not built yet (see [`docs/multi-repo.md`](docs/multi-repo.md)): **shared conventions** that

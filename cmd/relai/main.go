@@ -13,6 +13,7 @@ import (
 	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/initrepo"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scaffold"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/workspace"
 )
 
 // defaultIndexPath is where `relai index build` writes and `relai find` reads by default.
@@ -33,6 +34,9 @@ Usage:
                          into an index (default: .relai/index.json)
   relai find [--index <path>] <capability>
                          search the index for repos that already provide <capability>
+  relai workspace [--index <path>] [--max-tokens N]
+                         one short overview of every project in the index: last activity, open tasks,
+                         what each provides (reads files only, never runs bd; default 800 tokens)
   relai new <template> <dir>
                          scaffold <dir> from <template> (a local path or clone URL), substituting
                          {{.RepoName}} etc. in its text files, then filling in anything the
@@ -164,6 +168,19 @@ func main() {
 		for _, e := range found {
 			fmt.Printf("- %s (%s): %s\n", e.RelaiYAML.ID, e.Source, e.RelaiYAML.Summary)
 		}
+	case "workspace":
+		fs := flag.NewFlagSet("workspace", flag.ExitOnError)
+		idx := fs.String("index", defaultIndexPath, "path to the index built by `relai index build`")
+		max := fs.Int("max-tokens", workspace.DefaultOptions().MaxTokens, "token budget for the overview")
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
+		b, err := os.ReadFile(*idx)
+		if err != nil {
+			fmt.Printf("no index at %s — build one first: relai index build -o %s <list-file>\n", *idx, *idx)
+			os.Exit(1)
+		}
+		var entries []index.Entry
+		exitOn(json.Unmarshal(b, &entries))
+		fmt.Print(workspace.Render(workspace.Load(entries), workspace.Options{MaxTokens: *max}))
 	case "new":
 		fs := flag.NewFlagSet("new", flag.ExitOnError)
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))

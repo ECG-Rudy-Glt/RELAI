@@ -56,3 +56,19 @@ func beadsFailure(err error) string {
 	}
 	return "bd failed to read the tasks"
 }
+
+// TaskBrief is an unfinished task as other packages (the workspace view) need it.
+type TaskBrief struct {
+	ID, Title, Status string
+	Priority          int
+}
+
+// SnapshotBrief returns the unfinished, non-epic tasks recorded in dir's .beads/issues.jsonl, most
+// urgent first, without running bd. The file is a copy kept in git, so it may lag the live list.
+func SnapshotBrief(dir string) []TaskBrief {
+	var out []TaskBrief
+	for _, t := range readSnapshot(dir) {
+		out = append(out, TaskBrief{ID: t.ID, Title: cleanControl(t.Title), Status: t.Status, Priority: t.Priority})
+	}
+	return out
+}
