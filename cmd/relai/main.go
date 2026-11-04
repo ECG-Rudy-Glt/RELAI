@@ -52,7 +52,7 @@ func main() {
 		fs := flag.NewFlagSet("init", flag.ExitOnError)
 		noLink := fs.Bool("no-link", false, "write a new AGENTS.md instead of linking it to an existing CLAUDE.md")
 		noClaude := fs.Bool("no-claude", false, "do not add CLAUDE.md and the Claude Code session-start hook")
-		_ = fs.Parse(os.Args[2:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		r, err := initrepo.InitWith(dirArg(fs), initrepo.Options{LinkClaude: !*noLink, ClaudeCode: !*noClaude})
 		exitOn(err)
 		for _, c := range r.Created {
@@ -76,7 +76,7 @@ func main() {
 		fs := flag.NewFlagSet("handoff", flag.ExitOnError)
 		fs.IntVar(&o.MaxTokens, "max-tokens", o.MaxTokens, "token budget for the whole handoff")
 		out := fs.String("o", "", "write to this file instead of stdout (e.g. .relai/handoff.md)")
-		_ = fs.Parse(os.Args[2:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		doc, err := handoff.Build(dirArg(fs), o)
 		exitOn(err)
 		if *out == "" {
@@ -89,7 +89,7 @@ func main() {
 		fs := flag.NewFlagSet("discover", flag.ExitOnError)
 		prompt := fs.Bool("prompt", false, "print instructions for an agent to draft .relai/notes.md from what was found")
 		asJSON := fs.Bool("json", false, "print the inventory as JSON")
-		_ = fs.Parse(os.Args[2:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		inv := discover.Scan(dirArg(fs))
 		switch {
 		case *prompt:
@@ -111,7 +111,7 @@ func main() {
 		}
 		fs := flag.NewFlagSet("index build", flag.ExitOnError)
 		out := fs.String("o", defaultIndexPath, "write the index to this file")
-		_ = fs.Parse(os.Args[3:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[3:]))
 		if fs.NArg() < 1 {
 			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] <list-file>")
 			os.Exit(2)
@@ -138,7 +138,7 @@ func main() {
 	case "find":
 		fs := flag.NewFlagSet("find", flag.ExitOnError)
 		idx := fs.String("index", defaultIndexPath, "path to the index built by `relai index build`")
-		_ = fs.Parse(os.Args[2:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		if fs.NArg() < 1 {
 			fmt.Fprintln(os.Stderr, "usage: relai find [--index <path>] <capability>")
 			os.Exit(2)
@@ -161,7 +161,7 @@ func main() {
 		}
 	case "new":
 		fs := flag.NewFlagSet("new", flag.ExitOnError)
-		_ = fs.Parse(os.Args[2:])
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		if fs.NArg() < 2 {
 			fmt.Fprintln(os.Stderr, "usage: relai new <template> <dir>")
 			os.Exit(2)
