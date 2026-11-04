@@ -162,7 +162,7 @@ In degraded mode:
   ```
 
   Recently touched files come from `git log --since=7.days --name-only`; markers come from
-  `git grep -n -I -E "TODO|FIXME"` over tracked files. Both are bounded by the same token budget
+  `git grep -n -I -E "(^|[^.A-Za-z_])(TODO|FIXME)[:(]"` (a marker such as `TODO:` or `FIXME(name)`, not the word in prose, a file called `TODO.md` or `context.TODO()`) over tracked files. Both are bounded by the same token budget
   as the rest of the handoff (§5); when both would exceed it, the longer list is truncated first.
 - `## Harness` (§4.5) and `## Decisions and pitfalls` (§4.6) behave exactly as in full mode (both
   are typically empty placeholders in degraded mode, since there is no harness or notes yet, but
@@ -214,7 +214,7 @@ good enough for agents.
   "cannot be read" (§4.3); with `openspec/` present but the tool missing or failing, the handoff says so
   and lists the changes read from `openspec/changes/*/tasks.md` (§4.4); the changes list is capped like the
   task lists, with "… (N more changes)", so many active changes cannot break the budget (§5). The cut of
-  each list is found by bisection, not one item at a time (same output, no minutes-long runs on big repos).
+  degraded-mode markers must be written as `TODO:`/`FIXME(...)` (§4.7); each list is found by bisection, not one item at a time (same output, no minutes-long runs on big repos).
 - v0.4 (2026-11-03) — `## Tasks` says when the tasks cannot be read here (fresh clone, no `bd`, `bd` failing)
   and falls back to the snapshot in `.beads/issues.jsonl` (§4.3), instead of printing "Ready: 0".
 - v0.3 (2026-11-03) — `Team signals:` line in `## State` (§4.2), shown only with two signals of

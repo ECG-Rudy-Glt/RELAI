@@ -102,10 +102,14 @@ func collect(dir string) sources {
 	s.degraded = !inv.HasCoreHarness()
 	if s.degraded {
 		s.recentFiles = dedupe(lines(must(run(dir, "git", "log", "--since=7.days", "--name-only", "--pretty=format:"))))
-		s.markers = lines(must(run(dir, "git", "grep", "-n", "-I", "-E", "TODO|FIXME")))
+		s.markers = lines(must(run(dir, "git", "grep", "-n", "-I", "-E", markerPattern)))
 	}
 	if b, err := os.ReadFile(filepath.Join(dir, ".relai", "notes.md")); err == nil {
 		s.notes = strings.Split(strings.TrimRight(string(b), "\n"), "\n")
 	}
 	return s
 }
+
+// markerPattern matches a TODO or FIXME written as a marker ("TODO:", "TODO(name)", "FIXME:"), not
+// the word in prose, a file named TODO.md, or Go's context.TODO() (a '.' or a letter before it).
+const markerPattern = `(^|[^.A-Za-z_])(TODO|FIXME)[:(]`

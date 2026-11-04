@@ -179,3 +179,24 @@ func TestStateLineWordingForEmptyAndDetached(t *testing.T) {
 		t.Errorf("detached:\n%s", doc)
 	}
 }
+
+func TestMarkersAreMarkersNotWords(t *testing.T) {
+	dir := bareGitRepo(t)
+	src := "// TODO: real one\n// FIXME(rudy): another\nctx := context.TODO()\nsee TODO.md for the plan\nthe todo list\n"
+	_ = os.WriteFile(filepath.Join(dir, "a.go"), []byte(src), 0o644)
+	commitAll(t, dir, "add")
+	doc, err := Build(dir, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"TODO: real one", "FIXME(rudy): another"} {
+		if !strings.Contains(doc, want) {
+			t.Errorf("missing marker %q:\n%s", want, doc)
+		}
+	}
+	for _, noise := range []string{"context.TODO()", "see TODO.md", "the todo list"} {
+		if strings.Contains(doc, noise) {
+			t.Errorf("%q is not a marker:\n%s", noise, doc)
+		}
+	}
+}

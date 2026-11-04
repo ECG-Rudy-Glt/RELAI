@@ -16,7 +16,7 @@ func bigRepo(t *testing.T, files, noteLines int) string {
 	t.Helper()
 	dir := gitRepo(t, 1)
 	for i := 0; i < files; i++ {
-		if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("f%d.txt", i)), []byte("// TODO fix\n"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("f%d.txt", i)), []byte("// TODO: fix\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
