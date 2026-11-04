@@ -214,7 +214,7 @@ good enough for agents.
   "cannot be read" (§4.3); with `openspec/` present but the tool missing or failing, the handoff says so
   and lists the changes read from `openspec/changes/*/tasks.md` (§4.4); the changes list is capped like the
   task lists, with "… (N more changes)", so many active changes cannot break the budget (§5). The cut of
-  degraded-mode markers must be written as `TODO:`/`FIXME(...)` (§4.7); each list is found by bisection, not one item at a time (same output, no minutes-long runs on big repos).
+  degraded-mode markers must be written as `TODO:`/`FIXME(...)` (§4.7); `bd` is asked at most once per change of `.beads/last-touched` (answers kept in the user cache directory, never in the repository), because each `bd` run rewrites about 3 MiB of its database; each list is found by bisection, not one item at a time (same output, no minutes-long runs on big repos).
 - v0.4 (2026-11-03) — `## Tasks` says when the tasks cannot be read here (fresh clone, no `bd`, `bd` failing)
   and falls back to the snapshot in `.beads/issues.jsonl` (§4.3), instead of printing "Ready: 0".
 - v0.3 (2026-11-03) — `Team signals:` line in `## State` (§4.2), shown only with two signals of

@@ -55,7 +55,7 @@ func collect(dir string) sources {
 	if exists(filepath.Join(dir, ".beads")) {
 		if !onPath("bd") {
 			s.beadsProblem = "the bd command is not installed"
-		} else if out, err := run(dir, "bd", "ready", "--json"); err != nil {
+		} else if out, doingRaw, blockedRaw, err := bdOutputs(dir); err != nil {
 			s.beadsProblem = beadsFailure(err)
 		} else {
 			if err := json.Unmarshal([]byte(out), &s.ready); err != nil && strings.TrimSpace(out) != "" {
@@ -63,8 +63,8 @@ func collect(dir string) sources {
 				s.beadsProblem = "bd returned output that could not be read"
 			} else {
 				s.hasBeads = true
-				_ = json.Unmarshal([]byte(must(run(dir, "bd", "list", "--status", "in_progress", "--json"))), &s.doing)
-				_ = json.Unmarshal([]byte(must(run(dir, "bd", "blocked", "--json"))), &s.blocked)
+				_ = json.Unmarshal([]byte(doingRaw), &s.doing)
+				_ = json.Unmarshal([]byte(blockedRaw), &s.blocked)
 			}
 		}
 		if s.beadsProblem != "" {

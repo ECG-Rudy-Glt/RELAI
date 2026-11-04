@@ -200,3 +200,48 @@ func TestMarkersAreMarkersNotWords(t *testing.T) {
 		}
 	}
 }
+
+func TestBdIsNotRunAgainWhileTheRepoIsUntouched(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	counter := filepath.Join(t.TempDir(), "calls")
+	fakeBD(t, `echo x >> `+counter+`; case "$1" in ready) echo '[{"id":"live-1","title":"Live task","priority":1}]';; *) echo '[]';; esac`)
+	dir := repoWithBeadsFiles(t, snapshotJSONL)
+	touch := filepath.Join(dir, ".beads", "last-touched")
+	_ = os.WriteFile(touch, []byte("p-1"), 0o644)
+	calls := func() int { b, _ := os.ReadFile(counter); return strings.Count(string(b), "x") }
+
+	first, err := Build(dir, DefaultOptions())
+	if err != nil || !strings.Contains(first, "live-1") {
+		t.Fatalf("first handoff: %v\n%s", err, first)
+	}
+	if calls() != 3 {
+		t.Fatalf("first handoff ran bd %d times, want 3", calls())
+	}
+	second, _ := Build(dir, DefaultOptions())
+	if calls() != 3 {
+		t.Errorf("an untouched repo ran bd again: %d calls", calls())
+	}
+	if second != first {
+		t.Errorf("the cached handoff differs from the first one")
+	}
+	// bd writes: last-touched changes, so the next handoff asks bd again.
+	later := time.Now().Add(time.Minute)
+	_ = os.WriteFile(touch, []byte("p-2"), 0o644)
+	_ = os.Chtimes(touch, later, later)
+	Build(dir, DefaultOptions())
+	if calls() != 6 {
+		t.Errorf("a touched repo should refresh: %d calls, want 6", calls())
+	}
+}
+
+func TestNoLastTouchedMeansNoCache(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	counter := filepath.Join(t.TempDir(), "calls")
+	fakeBD(t, `echo x >> `+counter+`; echo '[]'`)
+	dir := repoWithBeadsFiles(t, snapshotJSONL)
+	Build(dir, DefaultOptions())
+	Build(dir, DefaultOptions())
+	if b, _ := os.ReadFile(counter); strings.Count(string(b), "x") != 6 {
+		t.Errorf("without a fingerprint every handoff must ask bd: %q", b)
+	}
+}
