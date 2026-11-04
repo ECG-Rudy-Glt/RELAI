@@ -7,6 +7,7 @@
 package index
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,7 +49,7 @@ func Find(entries []Entry, capability string) []Entry {
 	var out []Entry
 	for _, e := range entries {
 		for _, p := range e.RelaiYAML.Provides {
-			if p.Capability == capability {
+			if strings.EqualFold(p.Capability, capability) {
 				out = append(out, e)
 				break
 			}
@@ -137,13 +138,15 @@ func cloneShallow(url string) (string, error) {
 		return "", err
 	}
 	cmd := exec.Command("git", "clone", "--depth", "1", "--quiet", url, tmp)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	done := make(chan error, 1)
 	go func() { done <- cmd.Run() }()
 	select {
 	case err := <-done:
 		if err != nil {
 			os.RemoveAll(tmp)
-			return "", fmt.Errorf("clone %s: %w", url, err)
+			return "", fmt.Errorf("clone %s: %w%s", url, err, gitReason(stderr.String()))
 		}
 		return tmp, nil
 	case <-time.After(60 * time.Second):
@@ -267,4 +270,24 @@ func unquote(s string) string {
 		return s[1 : len(s)-1]
 	}
 	return s
+}
+
+// gitReason keeps the last meaningful line of git's stderr ("fatal: repository ... not found") as
+// ": <reason>", with control characters removed, so a failed clone says why.
+func gitReason(stderr string) string {
+	lines := strings.Split(strings.TrimSpace(stderr), "\n")
+	last := strings.TrimSpace(lines[len(lines)-1])
+	last = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, last)
+	if last == "" {
+		return ""
+	}
+	if len(last) > 200 {
+		last = last[:200] + "…"
+	}
+	return ": " + last
 }

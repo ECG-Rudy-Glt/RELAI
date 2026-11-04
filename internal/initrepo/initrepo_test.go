@@ -152,3 +152,24 @@ func TestHookScriptNeverFailsAndFallsBackToPlainFiles(t *testing.T) {
 		t.Errorf("hook must never fail, got %v\n%s", err, out)
 	}
 }
+
+func TestInitIsAllOrNothingWhenRelaiIsAFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".relai"), []byte("in the way"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InitWith(dir, Options{ClaudeCode: true}); err == nil {
+		t.Fatal("expected an error")
+	}
+	for _, f := range []string{"AGENTS.md", "relai.yaml", "CLAUDE.md", ".claude"} {
+		if _, err := os.Lstat(filepath.Join(dir, f)); err == nil {
+			t.Errorf("%s was created before the error", f)
+		}
+	}
+}
+
+func TestClaudeSettingsHookHasATimeout(t *testing.T) {
+	if !strings.Contains(ClaudeSettings, `"timeout": 30`) {
+		t.Error("the generated SessionStart hook needs a timeout so a slow tool cannot block a session start")
+	}
+}

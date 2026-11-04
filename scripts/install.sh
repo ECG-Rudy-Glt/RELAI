@@ -4,7 +4,9 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/ECG-Rudy-Glt/RELAI/main/scripts/install.sh | sh
 #
-# Env overrides: RELAI_INSTALL_DIR (default /usr/local/bin), RELAI_VERSION (default: latest),
+# Env overrides: RELAI_INSTALL_DIR (default /usr/local/bin; when it is not writable the script stops and
+# says what to do, it never runs sudo by itself), RELAI_USE_SUDO=1 (allow `sudo mv` into that directory),
+# RELAI_VERSION (default: latest),
 # RELAI_REPO, RELAI_BASE_URL (download from somewhere other than this repo's GitHub releases; it must
 # also serve checksums.txt), RELAI_SKIP_VERIFY=1 (install without checking the checksum: not advised).
 #
@@ -87,9 +89,14 @@ tar -xzf "$tmp/$archive" -C "$tmp" relai
 
 if [ -w "$bin_dir" ] 2>/dev/null; then
   mv "$tmp/relai" "$bin_dir/relai"
-else
-  echo "relai: $bin_dir is not writable, retrying with sudo"
+elif [ "${RELAI_USE_SUDO:-0}" = "1" ]; then
+  echo "relai: $bin_dir is not writable, using sudo (RELAI_USE_SUDO=1)"
   sudo mv "$tmp/relai" "$bin_dir/relai"
+else
+  echo "relai: $bin_dir is not writable, nothing was installed." >&2
+  echo "relai: choose a directory you own:   RELAI_INSTALL_DIR=\$HOME/.local/bin   (and put it on your PATH)" >&2
+  echo "relai: or allow sudo for this run:   RELAI_USE_SUDO=1" >&2
+  exit 1
 fi
 chmod +x "$bin_dir/relai"
 
