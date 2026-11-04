@@ -10,7 +10,9 @@ package workspace
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -30,6 +32,7 @@ type Project struct {
 	Open, Doing         int
 	Top                 []handoff.TaskBrief // most urgent unfinished tasks
 	Remote              bool                // a clone URL: not read here
+	NoTaskList          bool                // no .beads/issues.jsonl: "no list" is not "no tasks"
 }
 
 // Options controls the overview.
@@ -58,6 +61,9 @@ func Load(entries []index.Entry) []Project {
 		}
 		if o, err := exec.Command("git", "-C", e.Source, "log", "-1", "--format=%cs").Output(); err == nil {
 			p.LastCommit = strings.TrimSpace(string(o))
+		}
+		if _, err := os.Stat(filepath.Join(e.Source, ".beads", "issues.jsonl")); err != nil {
+			p.NoTaskList = true
 		}
 		tasks := handoff.SnapshotBrief(e.Source)
 		for _, t := range tasks {
@@ -148,7 +154,11 @@ func render(ps []Project, tasks, full, caps int) string {
 		}
 		p("%s", line)
 		var facts []string
-		if !pr.Remote {
+		switch {
+		case pr.Remote:
+		case pr.NoTaskList:
+			facts = append(facts, "no task list in git (unknown, not zero)")
+		default:
 			facts = append(facts, fmt.Sprintf("%d open, %d in progress", pr.Open, pr.Doing))
 		}
 		if caps > 0 && len(pr.Provides) > 0 {

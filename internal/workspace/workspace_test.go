@@ -128,3 +128,16 @@ func TestRemoteAndEmptyAndHostileInput(t *testing.T) {
 		t.Errorf("remote/control characters: %q", doc)
 	}
 }
+
+func TestNoTaskListIsNotZeroTasks(t *testing.T) {
+	root := t.TempDir()
+	with := project(t, root, "tracked", "2026-11-01", nil, fmt.Sprintf(tasks, "t"))
+	without := project(t, root, "untracked", "2026-11-02", nil, "")
+	doc := Render(Load([]index.Entry{with, without}), DefaultOptions())
+	if !strings.Contains(doc, "no task list in git") {
+		t.Errorf("a project with no task export must not read as '0 open':\n%s", doc)
+	}
+	if strings.Count(doc, "0 open") != 0 {
+		t.Errorf("unexpected '0 open':\n%s", doc)
+	}
+}
