@@ -167,7 +167,9 @@ func main() {
 			os.Exit(2)
 		}
 		tplSrc, dir := fs.Arg(0), fs.Arg(1)
-		r, err := scaffold.New(tplSrc, dir, scaffold.Tokens{RepoName: filepath.Base(dir)})
+		abs, err := filepath.Abs(dir)
+		exitOn(err)
+		r, err := scaffold.New(tplSrc, dir, scaffold.Tokens{RepoName: initrepo.Slug(filepath.Base(abs))})
 		exitOn(err)
 		fmt.Printf("scaffolded %s from %s\n", dir, tplSrc)
 		for _, c := range r.Created {

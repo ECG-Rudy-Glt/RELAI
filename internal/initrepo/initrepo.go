@@ -38,7 +38,7 @@ func InitWith(dir string, o Options) (Result, error) {
 	if err != nil {
 		return r, err
 	}
-	name := slug(filepath.Base(dir))
+	name := Slug(filepath.Base(dir))
 
 	agents := filepath.Join(dir, "AGENTS.md")
 	claude := filepath.Join(dir, "CLAUDE.md")
@@ -196,6 +196,11 @@ func exists(p string) bool { _, err := os.Lstat(p); return err == nil }
 
 var nonSlug = regexp.MustCompile(`[^a-z0-9-]+`)
 
-func slug(s string) string {
-	return strings.Trim(nonSlug.ReplaceAllString(strings.ToLower(s), "-"), "-")
+// Slug turns a directory name into a repo id: lower case letters, digits and dashes. A name with
+// none of those (say, only non-Latin letters) becomes "project" rather than an empty id.
+func Slug(s string) string {
+	if v := strings.Trim(nonSlug.ReplaceAllString(strings.ToLower(s), "-"), "-"); v != "" {
+		return v
+	}
+	return "project"
 }

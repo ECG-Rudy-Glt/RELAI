@@ -152,3 +152,11 @@ func TestHookScriptNeverFailsAndFallsBackToPlainFiles(t *testing.T) {
 		t.Errorf("hook must never fail, got %v\n%s", err, out)
 	}
 }
+
+func TestSlug(t *testing.T) {
+	for in, want := range map[string]string{"My Widget-x": "my-widget-x", "日本語": "project", "": "project", "a_b.c": "a-b-c"} {
+		if got := Slug(in); got != want {
+			t.Errorf("Slug(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
