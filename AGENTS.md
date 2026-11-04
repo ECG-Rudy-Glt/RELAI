@@ -14,6 +14,8 @@ Start here:
 
 ## Rules
 - Keep this file under 100 lines.
+- End the commit message of finished work with `Closes <task id>`: `relai tidy` (run by the post-merge hook of
+  `relai init --hooks`) closes the task, refreshes `.beads/issues.jsonl` and deletes merged branches.
 - Record decisions and pitfalls in `.relai/notes.md`, not in chat.
 - After creating, updating or closing tasks, run `scripts/sync-beads.sh` and commit
   `.beads/issues.jsonl`: that file is the copy of the task list other people get when they clone.

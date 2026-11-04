@@ -261,3 +261,67 @@ func TestGitHookRefreshesTheExportInTheSameCommitAndNeverBlocks(t *testing.T) {
 	_ = os.Chtimes(filepath.Join(dir, ".beads", "last-touched"), future, future)
 	commit("third, bd fails")
 }
+
+func TestGitHookGivesUpOnABdThatHangs(t *testing.T) {
+	dir := t.TempDir()
+	gitInit(t, dir)
+	if _, err := InitWith(dir, Options{GitHook: true}); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.MkdirAll(filepath.Join(dir, ".beads"), 0o755)
+	_ = os.WriteFile(filepath.Join(dir, ".beads", "last-touched"), []byte("x"), 0o644)
+	bin := t.TempDir()
+	_ = os.WriteFile(filepath.Join(bin, "bd"), []byte("#!/bin/sh\nsleep 60\n"), 0o755)
+	_ = os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644)
+	for _, useTimeout := range []bool{true, false} {
+		path := bin + string(os.PathListSeparator) + os.Getenv("PATH")
+		if !useTimeout { // simulate a machine without timeout(1): a PATH with only what the hook needs
+			only := t.TempDir()
+			for _, tool := range []string{"sh", "git", "sed", "mktemp", "rm", "mv", "sleep", "kill", "dirname", "cat"} {
+				if p, err := exec.LookPath(tool); err == nil {
+					_ = os.Symlink(p, filepath.Join(only, tool))
+				}
+			}
+			path = bin + string(os.PathListSeparator) + only
+		}
+		c := exec.Command(filepath.Join(dir, ".git", "hooks", "pre-commit"))
+		c.Dir = dir
+		c.Env = append(os.Environ(), "PATH="+path, "RELAI_HOOK_TIMEOUT=1")
+		start := time.Now()
+		err := c.Run()
+		if err != nil || time.Since(start) > 10*time.Second {
+			t.Errorf("timeout available=%v: hook took %v, err %v; a hung bd must cost about 1 s and never fail", useTimeout, time.Since(start), err)
+		}
+	}
+}
+
+func TestPostMergeHookRunsTidyAndNeverFailsAPull(t *testing.T) {
+	dir := t.TempDir()
+	gitInit(t, dir)
+	if _, err := InitWith(dir, Options{GitHook: true}); err != nil {
+		t.Fatal(err)
+	}
+	hook := filepath.Join(dir, ".git", "hooks", "post-merge")
+	if st, err := os.Stat(hook); err != nil || st.Mode().Perm()&0o111 == 0 {
+		t.Fatalf("post-merge hook missing or not executable: %v", err)
+	}
+	bin := t.TempDir()
+	log := filepath.Join(bin, "calls")
+	_ = os.WriteFile(filepath.Join(bin, "relai"), []byte("#!/bin/sh\necho \"$@\" >> "+log+"\nexit 3\n"), 0o755) // relai fails
+	c := exec.Command(hook)
+	c.Dir = dir
+	c.Env = append(os.Environ(), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if err := c.Run(); err != nil {
+		t.Errorf("a failing relai must not fail the pull: %v", err)
+	}
+	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "tidy --apply --quiet") {
+		t.Errorf("the hook did not run tidy: %q", b)
+	}
+	// without relai on PATH it does nothing, quietly
+	c = exec.Command(hook)
+	c.Dir = dir
+	c.Env = []string{"PATH=" + os.Getenv("PATH")}
+	if err := c.Run(); err != nil {
+		t.Errorf("no relai installed: %v", err)
+	}
+}

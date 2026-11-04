@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -61,6 +62,41 @@ func Find(entries []Entry, capability string) []Entry {
 			}
 		}
 	}
+	return out
+}
+
+// Relation says how an indexed repo relates to the repo `me` (the one the person is working in), from the
+// links: each side declared: "linked" (me lists it), "links to you" (it lists me), "both" or "".
+func Relation(e Entry, me Manifest) string {
+	mine, theirs := false, false
+	for _, l := range me.Links {
+		if me.ID != "" && l == e.RelaiYAML.ID {
+			mine = true
+		}
+	}
+	for _, l := range e.RelaiYAML.Links {
+		if me.ID != "" && l == me.ID {
+			theirs = true
+		}
+	}
+	switch {
+	case mine && theirs:
+		return "linked both ways"
+	case mine:
+		return "linked from here"
+	case theirs:
+		return "links to this repo"
+	}
+	return ""
+}
+
+// Order puts the repos related to `me` first, keeping the given order otherwise (it is stable and never
+// removes anything).
+func Order(found []Entry, me Manifest) []Entry {
+	out := append([]Entry(nil), found...)
+	sort.SliceStable(out, func(i, j int) bool {
+		return Relation(out[i], me) != "" && Relation(out[j], me) == ""
+	})
 	return out
 }
 
@@ -190,6 +226,7 @@ func ParseManifestWarn(b []byte) (Manifest, []string) { return parseManifest(b) 
 func parseManifest(b []byte) (Manifest, []string) {
 	var m Manifest
 	var warn []string
+	seenKeys := map[string]bool{}
 	text := strings.TrimPrefix(string(b), "\ufeff")
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	lines := strings.Split(text, "\n")
@@ -229,10 +266,16 @@ func parseManifest(b []byte) (Manifest, []string) {
 			if len(caps) == 0 && len(w) == 0 && rest != "" && rest != "[]" && rest != "~" && rest != "null" {
 				warn = append(warn, key+": value "+rest+" was not understood")
 			}
+			// A key written twice is invalid YAML. Keep both lists (losing the first would make `relai find`
+			// say nothing provides it) and say so.
+			if seenKeys[key] {
+				warn = append(warn, key+": the key appears twice; both lists are kept, merge them")
+			}
+			seenKeys[key] = true
 			if key == "provides" {
-				m.Provides = caps
+				m.Provides = append(m.Provides, caps...)
 			} else {
-				m.Consumes = caps
+				m.Consumes = append(m.Consumes, caps...)
 			}
 		}
 	}

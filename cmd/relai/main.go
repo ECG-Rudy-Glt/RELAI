@@ -15,6 +15,7 @@ import (
 	"github.com/ECG-Rudy-Glt/RELAI/internal/initrepo"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scaffold"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scan"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/tidy"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/workspace"
 )
 
@@ -35,7 +36,7 @@ Usage:
   relai index build [-o <path>] [--scan <folder>] [<list-file>]
                          read each repo path/URL in <list-file> (and/or every git repo in --scan <folder>)
                          and collect their relai.yaml into an index (default: .relai/index.json)
-  relai discover --links <folder> [--propose | --prompt] [--json]
+  relai discover --links <folder> [--depth N] [--propose [--min-weak N] | --prompt] [--json]
                          mentions between the git repos of <folder> (strong: remote URL or relative path;
                          weak: the name as a word). Evidence, not verified links; --propose prints a
                          links: block per relai.yaml to check and paste yourself; --prompt prints instructions
@@ -45,6 +46,9 @@ Usage:
   relai workspace [--index <path>] [--max-tokens N]
                          one short overview of every project in the index: last activity, open tasks,
                          what each provides (reads files only, never runs bd; default 800 tokens)
+  relai tidy [--apply] [dir]
+                         after work is merged: close the tasks a commit says it closes ("Closes <id>"), refresh
+                         .beads/issues.jsonl, delete fully merged local branches. Dry run unless --apply; never commits
   relai new <template> <dir>
                          scaffold <dir> from <template> (a local path or clone URL), substituting
                          {{.RepoName}} etc. in its text files, then filling in anything the
@@ -104,6 +108,8 @@ func main() {
 		asJSON := fs.Bool("json", false, "print the inventory as JSON")
 		links := fs.Bool("links", false, "treat the argument as a folder of repositories and print the mentions between them")
 		propose := fs.Bool("propose", false, "with --links: print a links: block for each relai.yaml to check and paste yourself")
+		depth := fs.Int("depth", 1, "with --links: how many folder levels to look down for repositories (1 = directly inside)")
+		minWeak := fs.Int("min-weak", scan.DefaultMinWeak, "with --propose: files that must mention a name, in documents only, to propose it without strong evidence")
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		target := dirArg(fs)
 		if st, err := os.Stat(target); err != nil || !st.IsDir() {
@@ -111,7 +117,7 @@ func main() {
 			os.Exit(1)
 		}
 		if *links || *propose {
-			repos, err := scan.Find(target)
+			repos, err := scan.FindDepth(target, *depth)
 			exitOn(err)
 			ls := scan.Links(repos)
 			switch {
@@ -121,7 +127,7 @@ func main() {
 			case *prompt:
 				fmt.Print(scan.Prompt(target, repos, ls))
 			case *propose:
-				fmt.Print(scan.Propose(repos, ls))
+				fmt.Print(scan.Propose(repos, ls, *minWeak))
 			default:
 				fmt.Print(scan.Text(target, repos, ls))
 			}
@@ -149,6 +155,7 @@ func main() {
 		fs := flag.NewFlagSet("index build", flag.ExitOnError)
 		out := fs.String("o", defaultIndexPath, "write the index to this file")
 		scanDir := fs.String("scan", "", "find the git repositories in this folder instead of (or in addition to) a list file")
+		scanDepth := fs.Int("depth", 1, "with --scan: how many folder levels to look down for repositories")
 		_ = fs.Parse(reorderArgs(fs, os.Args[3:]))
 		if fs.NArg() < 1 && *scanDir == "" {
 			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] [--scan <folder>] [<list-file>]")
@@ -161,7 +168,7 @@ func main() {
 			exitOn(err)
 		}
 		if *scanDir != "" {
-			repos, err := scan.Find(*scanDir)
+			repos, err := scan.FindDepth(*scanDir, *scanDepth)
 			exitOn(err)
 			var without []string
 			for _, r := range repos {
@@ -214,8 +221,50 @@ func main() {
 			fmt.Printf("nothing in the index provides %q\n", capability)
 			return
 		}
-		for _, e := range found {
-			fmt.Printf("- %s (%s): %s\n", e.RelaiYAML.ID, e.Source, e.RelaiYAML.Summary)
+		// Run inside a repo that declares `links:`: the repos it works with come first and say so.
+		var me index.Manifest
+		if mb, err := os.ReadFile("relai.yaml"); err == nil {
+			me = index.ParseManifest(mb)
+		}
+		for _, e := range index.Order(found, me) {
+			rel := index.Relation(e, me)
+			if rel != "" {
+				rel = " [" + rel + "]"
+			}
+			fmt.Printf("- %s (%s)%s: %s\n", e.RelaiYAML.ID, e.Source, rel, e.RelaiYAML.Summary)
+			if len(e.RelaiYAML.Links) > 0 {
+				fmt.Printf("    works with: %s\n", strings.Join(e.RelaiYAML.Links, ", "))
+			}
+		}
+	case "tidy":
+		fs := flag.NewFlagSet("tidy", flag.ExitOnError)
+		apply := fs.Bool("apply", false, "do it (default: only show what would be done)")
+		quiet := fs.Bool("quiet", false, "print only what was done, and nothing when there is nothing to do")
+		limit := fs.Int("commits", 300, "how many recent commits to read")
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
+		p, err := tidy.Build(dirArg(fs), *limit)
+		exitOn(err)
+		if !*apply {
+			if !*quiet {
+				fmt.Print(p.Text())
+			}
+			return
+		}
+		r := p.Apply(dirArg(fs))
+		for _, id := range r.Closed {
+			fmt.Println("closed task", id)
+		}
+		for _, b := range r.DeletedBranches {
+			fmt.Println("deleted merged branch", b)
+		}
+		if r.ExportRewritten {
+			fmt.Println("rewrote .beads/issues.jsonl: commit it")
+		}
+		for _, n := range r.Notes {
+			fmt.Println("note:", n)
+		}
+		if !*quiet && len(r.Closed)+len(r.DeletedBranches) == 0 && len(r.Notes) == 0 {
+			fmt.Println("nothing to do.")
 		}
 	case "workspace":
 		fs := flag.NewFlagSet("workspace", flag.ExitOnError)

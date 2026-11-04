@@ -108,13 +108,23 @@ func InitWith(dir string, o Options) (Result, error) {
 // Beads or bd, and never blocks a commit.
 const PreCommitHook = `#!/bin/sh
 # relai: keep .beads/issues.jsonl (the task list kept in git) current. Installed by "relai init --hooks".
-# Never blocks a commit: any problem here is ignored.
+# Never blocks a commit: any problem here is ignored, and bd gets at most RELAI_HOOK_TIMEOUT seconds (default 20).
 [ -d .beads ] || exit 0
 command -v bd >/dev/null 2>&1 || exit 0
 exp=.beads/issues.jsonl
 if [ -f "$exp" ] && [ -f .beads/last-touched ] && [ ! .beads/last-touched -nt "$exp" ]; then exit 0; fi
 tmp=$(mktemp) || exit 0
-if bd export -o "$tmp" >/dev/null 2>&1; then
+limit=${RELAI_HOOK_TIMEOUT:-20}
+if command -v timeout >/dev/null 2>&1; then
+  timeout "$limit" bd export -o "$tmp" >/dev/null 2>&1; ok=$?
+else
+  # no timeout(1) (macOS): a watchdog stops bd if it takes too long
+  bd export -o "$tmp" >/dev/null 2>&1 & pid=$!
+  ( sleep "$limit"; kill "$pid" 2>/dev/null ) >/dev/null 2>&1 & dog=$!
+  wait "$pid" 2>/dev/null; ok=$?
+  kill "$dog" 2>/dev/null
+fi
+if [ "$ok" = 0 ]; then
   # drop the "owner" field: it is the creator's e-mail address
   if sed -E 's/"owner":"[^"]*",//' "$tmp" > "$exp.tmp"; then mv "$exp.tmp" "$exp" && git add "$exp"; fi
 fi
@@ -122,29 +132,47 @@ rm -f "$tmp" "$exp.tmp"
 exit 0
 `
 
-// wireGitHook writes the pre-commit hook unless one is already there (it is never overwritten).
+// PostMergeHook runs the housekeeping after a pull or merge: it closes the tasks that merged commits say
+// they close and deletes fully merged local branches (see "relai tidy"). It does nothing without relai or
+// bd, is limited in time, and never fails the pull.
+const PostMergeHook = `#!/bin/sh
+# relai: housekeeping after a merge or pull ("relai tidy --apply"). Installed by "relai init --hooks".
+# Never fails the merge: any problem here is ignored.
+command -v relai >/dev/null 2>&1 || exit 0
+limit=${RELAI_HOOK_TIMEOUT:-60}
+if command -v timeout >/dev/null 2>&1; then
+  timeout "$limit" relai tidy --apply --quiet || true
+else
+  relai tidy --apply --quiet || true
+fi
+exit 0
+`
+
+// wireGitHook writes the pre-commit and post-merge hooks unless one is already there (never overwritten).
 func wireGitHook(dir string, r *Result) error {
-	out, err := exec.Command("git", "-C", dir, "rev-parse", "--git-path", "hooks/pre-commit").Output()
-	if err != nil {
-		r.Skipped = append(r.Skipped, "git hook (not a git repository)")
-		return nil
+	for _, h := range []struct{ name, body string }{{"pre-commit", PreCommitHook}, {"post-merge", PostMergeHook}} {
+		out, err := exec.Command("git", "-C", dir, "rev-parse", "--git-path", "hooks/"+h.name).Output()
+		if err != nil {
+			r.Skipped = append(r.Skipped, "git hooks (not a git repository)")
+			return nil
+		}
+		path := strings.TrimSpace(string(out))
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(dir, path)
+		}
+		rel, _ := filepath.Rel(dir, path)
+		if exists(path) {
+			r.Skipped = append(r.Skipped, rel+" (already present: call `relai tidy --apply` / the task export from it yourself)")
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(path, []byte(h.body), 0o755); err != nil {
+			return err
+		}
+		r.Created = append(r.Created, rel)
 	}
-	path := strings.TrimSpace(string(out))
-	if !filepath.IsAbs(path) {
-		path = filepath.Join(dir, path)
-	}
-	rel, _ := filepath.Rel(dir, path)
-	if exists(path) {
-		r.Skipped = append(r.Skipped, rel+" (already present: add a call to the task export yourself, see "+"`scripts/sync-beads.sh` in the Relai repository)")
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, []byte(PreCommitHook), 0o755); err != nil {
-		return err
-	}
-	r.Created = append(r.Created, rel)
 	return nil
 }
 
