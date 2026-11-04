@@ -29,47 +29,80 @@ type Repo struct {
 }
 
 // Find returns the git repositories directly inside dir (and dir itself if it is one), sorted by name.
-// Hidden folders are skipped. It does not descend into repositories.
-func Find(dir string) ([]Repo, error) {
+// It is FindDepth(dir, 1).
+func Find(dir string) ([]Repo, error) { return FindDepth(dir, 1) }
+
+// skipDirs are folders that never hold the projects of a person, whatever their depth.
+var skipDirs = map[string]bool{"node_modules": true, "vendor": true, "graphify-out": true, "dist": true, "build": true, "target": true, "__pycache__": true}
+
+// FindDepth returns the git repositories inside dir, looking depth folder levels down (1 = directly
+// inside; 2 = also inside the folders that are not repositories themselves, and so on). Symbolic links
+// to repositories count and a repository reached twice is listed once. It never descends into a
+// repository, nor into hidden or generated folders. Repos found below the first level are named by their
+// path relative to dir ("clients/acme") so two projects with the same folder name stay distinct.
+func FindDepth(dir string, depth int) ([]Repo, error) {
+	if depth < 1 {
+		depth = 1
+	}
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
-	entries, err := os.ReadDir(abs)
-	if err != nil {
+	if _, err := os.ReadDir(abs); err != nil {
 		return nil, err
 	}
 	var paths []string
-	if isRepo(abs) {
-		paths = append(paths, abs)
-	}
 	seen := map[string]bool{}
-	if isRepo(abs) {
-		if real, err := filepath.EvalSymlinks(abs); err == nil {
-			seen[real] = true
-		}
-	}
-	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".") {
-			continue
-		}
-		p := filepath.Join(abs, e.Name())
-		// Stat, not the directory entry: a symbolic link to a repository (common when projects live
-		// elsewhere and are linked into one folder) is a repository.
-		if st, err := os.Stat(p); err != nil || !st.IsDir() || !isRepo(p) {
-			continue
-		}
+	mark := func(p string) bool {
 		if real, err := filepath.EvalSymlinks(p); err == nil {
 			if seen[real] {
-				continue // the same repository reached twice
+				return false
 			}
 			seen[real] = true
 		}
-		paths = append(paths, p)
+		return true
+	}
+	var walk func(d string, level int)
+	walk = func(d string, level int) {
+		entries, err := os.ReadDir(d)
+		if err != nil {
+			return
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".") || skipDirs[e.Name()] {
+				continue
+			}
+			p := filepath.Join(d, e.Name())
+			// Stat, not the directory entry: a symbolic link to a repository (common when projects live
+			// elsewhere and are linked into one folder) is a repository.
+			st, err := os.Stat(p)
+			if err != nil || !st.IsDir() {
+				continue
+			}
+			if isRepo(p) {
+				if mark(p) {
+					paths = append(paths, p)
+				}
+				continue
+			}
+			if level < depth && mark(p) {
+				walk(p, level+1)
+			}
+		}
+	}
+	if isRepo(abs) {
+		mark(abs)
+		paths = append(paths, abs)
+	} else {
+		walk(abs, 1)
 	}
 	var out []Repo
 	for _, p := range paths {
-		r := Repo{Name: filepath.Base(p), Path: p}
+		name := filepath.Base(p)
+		if rel, err := filepath.Rel(abs, p); err == nil && rel != "." && strings.Contains(rel, string(filepath.Separator)) {
+			name = filepath.ToSlash(rel)
+		}
+		r := Repo{Name: name, Path: p}
 		r.Relai = exists(filepath.Join(p, "relai.yaml"))
 		r.Tracker = exists(filepath.Join(p, ".beads"))
 		r.OpenSpec = exists(filepath.Join(p, "openspec"))

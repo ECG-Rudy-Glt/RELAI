@@ -3,6 +3,7 @@ package scan
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -12,12 +13,15 @@ import (
 // Link is what repository From says about repository To. Strong evidence is hard to produce by
 // accident (To's remote slug, a relative path to it); weak evidence is the name as a word.
 type Link struct {
-	From     string   `json:"from"`
-	To       string   `json:"to"`
-	Strong   int      `json:"strong_files"` // files of From holding strong evidence
-	Weak     int      `json:"weak_files"`   // files of From where To's name appears as a word
-	Kinds    []string `json:"kinds,omitempty"`
-	Evidence []string `json:"evidence,omitempty"` // up to three paths of From, never their content
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Strong int    `json:"strong_files"` // files of From holding strong evidence
+	Weak   int    `json:"weak_files"`   // files of From where To's name appears as a word
+	// WeakConfig is how many of the weak files are CI, deployment or configuration files (workflows, k8s,
+	// compose, yaml...). A name in those is far more often a real dependency than a name in a document.
+	WeakConfig int      `json:"weak_config_files"`
+	Kinds      []string `json:"kinds,omitempty"`
+	Evidence   []string `json:"evidence,omitempty"` // up to three paths of From, never their content
 }
 
 // minNameLength keeps very short names ("ring", "app") from matching everywhere: shorter ones are
@@ -44,15 +48,18 @@ func Links(repos []Repo) []Link {
 					l.addKind("remote URL")
 				}
 			}
-			for _, f := range grepRegexp(a.Path, `\.\./`+regexp.QuoteMeta(b.Name)+`(/|"|'|\s|$)`) {
+			for _, f := range grepRegexp(a.Path, `\.\./`+regexp.QuoteMeta(b.match())+`(/|"|'|\s|$)`) {
 				strong[f] = true
 				l.addKind("relative path")
 			}
 			l.Strong = len(strong)
 			weak := map[string]bool{}
-			if len(b.Name) >= minNameLength {
-				for _, f := range grep(a.Path, b.Name, true) {
+			if len(b.match()) >= minNameLength {
+				for _, f := range grep(a.Path, b.match(), true) {
 					weak[f] = true
+					if configLike(f) {
+						l.WeakConfig++
+					}
 				}
 			}
 			l.Weak = len(weak)
@@ -90,6 +97,19 @@ func Links(repos []Repo) []Link {
 	})
 	return out
 }
+
+var configRE = regexp.MustCompile(`(?i)(^|/)(\.github|\.forgejo|\.gitea|\.gitlab|\.circleci|k8s|kubernetes|deploy|ansible|terraform|helm|charts|infra)/|(^|/)(docker-compose[^/]*|dockerfile[^/]*|makefile|justfile|\.gitlab-ci\.yml)$|\.(tf|hcl|toml)$`)
+
+// configLike says whether a path is a CI, deployment or configuration file. Documents (.md), the task
+// export and OpenSpec files are not.
+func configLike(path string) bool {
+	if strings.HasPrefix(path, ".beads/") || strings.HasPrefix(path, "openspec/") || strings.HasSuffix(strings.ToLower(path), ".md") {
+		return false
+	}
+	return configRE.MatchString(path) || strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml")
+}
+
+func (r Repo) match() string { return filepath.Base(r.Path) }
 
 func (l *Link) addKind(k string) {
 	for _, x := range l.Kinds {
@@ -149,7 +169,11 @@ func Text(dir string, repos []Repo, links []Link) string {
 		if ev != "" {
 			ev = " (" + ev + ")"
 		}
-		fmt.Fprintf(&b, "- %s -> %s: strong %d file(s)%s, weak %d file(s)\n", l.From, l.To, l.Strong, ev, l.Weak)
+		weak := fmt.Sprintf("weak %d file(s)", l.Weak)
+		if l.WeakConfig > 0 {
+			weak += fmt.Sprintf(" (%d in CI/deploy/config files)", l.WeakConfig)
+		}
+		fmt.Fprintf(&b, "- %s -> %s: strong %d file(s)%s, %s\n", l.From, l.To, l.Strong, ev, weak)
 		if len(l.Evidence) > 0 {
 			fmt.Fprintf(&b, "    e.g. %s\n", strings.Join(l.Evidence, ", "))
 		}
@@ -157,15 +181,23 @@ func Text(dir string, repos []Repo, links []Link) string {
 	return b.String()
 }
 
-// weakThreshold is how many files must mention a name before it is worth proposing without strong evidence.
-const weakThreshold = 5
+// DefaultMinWeak is how many files must mention a name, in documents only, before it is worth proposing
+// without strong evidence. A name in two or more CI/deployment/configuration files is proposed without it.
+const DefaultMinWeak = 5
+
+// minWeakConfig is how many CI/deploy/config files naming a repository are enough to propose it.
+const minWeakConfig = 2
 
 // Propose renders, for each repository, a `links:` block a person can paste into its relai.yaml after
-// checking it. Nothing is written anywhere.
-func Propose(repos []Repo, links []Link) string {
+// checking it. A line is proposed when there is strong evidence, or the name appears in at least
+// minWeakConfig CI/deploy/config files, or in at least minWeak files of any kind. Nothing is written anywhere.
+func Propose(repos []Repo, links []Link, minWeak int) string {
+	if minWeak <= 0 {
+		minWeak = DefaultMinWeak
+	}
 	by := map[string][]Link{}
 	for _, l := range links {
-		if l.Strong > 0 || l.Weak >= weakThreshold {
+		if l.Strong > 0 || l.WeakConfig >= minWeakConfig || l.Weak >= minWeak {
 			by[l.From] = append(by[l.From], l)
 		}
 	}
@@ -179,6 +211,9 @@ func Propose(repos []Repo, links []Link) string {
 		fmt.Fprintf(&b, "\n# %s/relai.yaml\nlinks:\n", r.Name)
 		for _, l := range ls {
 			conf := fmt.Sprintf("weak: %d files", l.Weak)
+			if l.WeakConfig >= minWeakConfig {
+				conf = fmt.Sprintf("weak: %d files, %d in CI/deploy/config", l.Weak, l.WeakConfig)
+			}
 			if l.Strong > 0 {
 				conf = fmt.Sprintf("strong: %d files", l.Strong)
 			}

@@ -136,6 +136,7 @@ You do not have to write the list of your projects by hand:
 ```sh
 relai index build --scan ~/projects      # every git repo of the folder (symlinks included); says which need `relai init`
 relai discover --links ~/projects        # the mentions between them: who points at whom, and how strongly
+relai discover --links ~/projects --depth 2  # also look one folder deeper (nested repos are named by path)
 relai discover --links ~/projects --prompt   # instructions for your agent to check each mention with you
 relai discover --links ~/projects --propose  # a `links:` block per relai.yaml to check and paste yourself
 ```
@@ -143,10 +144,27 @@ relai discover --links ~/projects --propose  # a `links:` block per relai.yaml t
 The result is **evidence, not a verdict**. *Strong*: a repository holds the other's remote URL or a relative path to it (a
 deployment manifest pointing at an application). *Weak*: its name appears as a word (it can be an ordinary word, and names
 under four letters are not searched this way). Each line shows counts and up to three file paths, never content, and
-generated files (`node_modules`, `vendor`, lock files, `graphify-out`) are ignored. Nothing is ever written: the intended
+generated files (`node_modules`, `vendor`, lock files, `graphify-out`) are ignored. A name found in two or more CI, deployment or
+configuration files (workflows, k8s, compose, yaml) is proposed by `--propose` even without strong evidence, because that is far
+more often a real dependency than a name in a document; documents alone need `--min-weak` files (default 5). Once `links:` is
+declared, `relai find` shows `works with:` and lists first the repos linked with the one you are in (`[linked from here]`). Nothing is ever written: the intended
 flow is that your agent verifies each mention against the files, shows you a table, and writes `links:` into `relai.yaml`
 only once you agree. `links:` (ids of the repositories this one works with) is read by the index and shown by
 `relai workspace`; `provides:`/`consumes:` still say *what*, `links:` says *who*.
+
+## Housekeeping after merges (automatic)
+
+Closing the tasks that merged work finished, refreshing the committed task export and deleting merged branches should not
+depend on someone remembering. `relai init --hooks` installs two git hooks:
+
+- **pre-commit**: keeps `.beads/issues.jsonl` current in the commit that changes the tasks (`bd` gets at most 20 seconds).
+- **post-merge**: runs `relai tidy --apply` after every pull or merge.
+
+`relai tidy` (dry run by default) closes a task when a commit **on the default branch** says so with a keyword and the id
+(`Closes relai-7nk`, `fixes #relai-7nk`); a task that is only *named* is reported and left open. It rewrites
+`.beads/issues.jsonl` (without the owner e-mail), deletes local branches that are fully merged (`git branch -d`, so never
+unmerged work) and **never commits**. From a feature branch it closes nothing. So: end the commit message of finished work
+with `Closes <task id>`.
 
 ## Check before you build
 

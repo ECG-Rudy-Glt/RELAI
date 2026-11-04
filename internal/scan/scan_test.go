@@ -126,7 +126,7 @@ func TestTextAndProposeSayWhatTheyAreAndWriteNothing(t *testing.T) {
 		t.Errorf("text:\n%s", txt)
 	}
 	before, _ := os.ReadFile(filepath.Join(root, "homelab", "relai.yaml"))
-	prop := Propose(repos, ls)
+	prop := Propose(repos, ls, 0)
 	after, _ := os.ReadFile(filepath.Join(root, "homelab", "relai.yaml"))
 	if string(before) != string(after) {
 		t.Error("Propose wrote to a relai.yaml")
@@ -178,5 +178,66 @@ func TestPromptTellsTheAgentToVerifyAndAskBeforeWriting(t *testing.T) {
 		if !strings.Contains(p, want) {
 			t.Errorf("prompt lacks %q:\n%s", want, p)
 		}
+	}
+}
+
+func TestFindDepthLooksInsideFoldersButNeverInsideRepositories(t *testing.T) {
+	root := t.TempDir()
+	mkrepo(t, root, "top", "", map[string]string{"nested/deep/x.txt": "inside a repo: must not be searched for repos"})
+	mkrepo(t, filepath.Join(root, "clients"), "acme", "", map[string]string{})
+	mkrepo(t, filepath.Join(root, "clients"), "globex", "", map[string]string{})
+	mkrepo(t, filepath.Join(root, "personal"), "acme", "", map[string]string{}) // same folder name, other place
+	mkrepo(t, filepath.Join(root, "node_modules"), "dep", "", map[string]string{})
+	names := func(depth int) string {
+		repos, err := FindDepth(root, depth)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var n []string
+		for _, r := range repos {
+			n = append(n, r.Name)
+		}
+		return strings.Join(n, ",")
+	}
+	if got := names(1); got != "top" {
+		t.Errorf("depth 1 = %q, want only the repo directly inside", got)
+	}
+	if got := names(2); got != "clients/acme,clients/globex,personal/acme,top" {
+		t.Errorf("depth 2 = %q: nested repos must be named by path so two 'acme' stay distinct, node_modules skipped", got)
+	}
+}
+
+func TestWeakMentionsInConfigFilesCountMoreThanInDocuments(t *testing.T) {
+	root := t.TempDir()
+	mkrepo(t, root, "deployer", "", map[string]string{
+		".github/workflows/deploy.yml": "run: deploy webshop\n",
+		"k8s/webshop.yaml":             "name: webshop\n",
+		"NOTES.md":                     "webshop webshop\n",
+	})
+	mkrepo(t, root, "chatty", "", map[string]string{"a.md": "webshop", "b.md": "webshop", "c.md": "webshop"})
+	mkrepo(t, root, "webshop", "", map[string]string{})
+	repos, _ := Find(root)
+	ls := Links(repos)
+	var dep, chat *Link
+	for i := range ls {
+		if ls[i].To == "webshop" && ls[i].From == "deployer" {
+			dep = &ls[i]
+		}
+		if ls[i].To == "webshop" && ls[i].From == "chatty" {
+			chat = &ls[i]
+		}
+	}
+	if dep == nil || dep.WeakConfig != 2 || dep.Weak != 3 {
+		t.Fatalf("deployer -> webshop = %+v, want 3 weak files of which 2 in CI/deploy config", dep)
+	}
+	if chat == nil || chat.WeakConfig != 0 || chat.Weak != 3 {
+		t.Fatalf("chatty -> webshop = %+v, want 3 weak files, none in config", chat)
+	}
+	prop := Propose(repos, ls, 0) // default threshold of 5 documents
+	if !strings.Contains(prop, "# deployer/relai.yaml") || strings.Contains(prop, "# chatty/relai.yaml") {
+		t.Errorf("two config files should be proposed, three documents should not:\n%s", prop)
+	}
+	if !strings.Contains(Propose(repos, ls, 3), "# chatty/relai.yaml") {
+		t.Error("--min-weak 3 should make three documents enough")
 	}
 }
