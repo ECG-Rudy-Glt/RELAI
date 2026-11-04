@@ -14,11 +14,13 @@ Relai is an open, agent-agnostic layer of files in git plus one CLI. No server, 
 - **check before you build**: a project index (a plain git repo of `relai.yaml` files) to find what
   the other projects already provide before writing a duplicate;
 - **one view of all your projects** (`relai workspace`): last activity, open work and what each
-  provides, in about 800 tokens, from files only;
+  provides, in about 400 tokens for 16 repos, from files only;
 - an optional **golden path**: a project template born with all of the above (`relai new`).
 
+Also shipped: **linked repositories** (`links:` in `relai.yaml`, found with `relai discover --links`; a
+person confirms them) and an optional self-hosted team board, [RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM).
 Planned, not built yet (see [`docs/multi-repo.md`](docs/multi-repo.md)): **shared conventions** that
-every repo points to, and **links between projects** with upstream changes shown in the handoff.
+every repo points to, and **upstream changes** shown in the handoff.
 
 It composes existing standards (AGENTS.md, Agent Skills, OpenSpec, Beads) instead of replacing them.
 
@@ -40,30 +42,33 @@ were measured once per case: treat them as indications, not as a guarantee.
 flowchart TB
   subgraph repo["Repo contract (every repo)"]
     agents["AGENTS.md (L0, ≤100 lines)"]
-    manifest["relai.yaml (provides / consumes)"]
+    manifest["relai.yaml (id, provides, consumes, links)"]
     notes[".relai/notes.md (decisions, pitfalls)"]
     specs["openspec/ + .beads/ (adapters, optional)"]
   end
-  handoff["relai handoff (L1, ≤2k tokens, generated;<br/>degraded mode if none of the above exists)"]
+  handoff["relai handoff (≤2k tokens, generated from files;<br/>degraded mode if none of the above exists)"]
   repo --> handoff
-  conv["Shared conventions repo (versioned, planned)"] -. "referenced by relai.yaml" .-> repo
   index["index.json (relai.yaml of every known project)"]
   repo -- "relai index build" --> index
-  person(["Person B + their agent"]) -- "git pull, read L0 + L1, then bd ready" --> repo
-  person -- "relai find: check before you build" --> index
-  tpl["Golden path template (planned)"] -. "new repo, pre-wired" .-> repo
+  view["relai workspace · relai find<br/>(all projects on one page, check before you build)"]
+  index --> view
+  disc["relai discover --links<br/>(repos of a folder, mentions between them: evidence)"]
+  index --> disc
+  disc -- "links: written once a person agrees" --> manifest
+  hooks["git hooks: pre-commit export, post-merge relai tidy"] --> repo
+  tpl["relai new (golden path template)"] --> repo
+  person(["Person + their agent"]) -- "git pull, read L0 + L1, then the next task" --> handoff
+  person -- "ask before building" --> view
+  team["RELAI-TEAM (optional, self-hosted):<br/>board, claims with leases, MCP, issue mirror"] -. "reads the same files" .-> repo
+  team --- person
+  conv["Shared conventions repo (planned)"] -. "referenced by relai.yaml" .-> repo
 ```
 
-Solid arrows are shipped; dashed ones are planned (shared conventions, golden path — see
-[`docs/DESIGN.md`](docs/DESIGN.md)). Everything shipped runs from a single static binary against
+Solid arrows are shipped. Dashed ones are planned (shared conventions, see [`docs/DESIGN.md`](docs/DESIGN.md)) or
+belong to the separate optional board. Everything in Relai itself runs from a single static binary against
 local git repos — no server, no Docker, no account, including the cross-repo index above.
 
-<details>
-<summary>Same diagram, as an editable <a href="docs/diagrams/architecture.drawio">draw.io file</a></summary>
-
-![Relai architecture diagram](docs/diagrams/architecture.png)
-
-</details>
+![Relai architecture diagram](docs/diagrams/architecture.svg)
 
 ## Quick start
 
@@ -122,7 +127,7 @@ claiming there is nothing to do. Keep the file current with `scripts/sync-beads.
 
 ```sh
 relai index build repos.txt      # once: collect each project's relai.yaml (paths or clone URLs)
-relai workspace                  # ≈ 800 tokens: every project, most recently active first
+relai workspace                  # ≈ 400 tokens for 16 repos: every project, most recently active first
 ```
 
 For each indexed project `relai workspace` shows the date of its last commit, how many tasks are open and in progress,
