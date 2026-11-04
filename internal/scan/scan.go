@@ -26,6 +26,9 @@ type Repo struct {
 	Agents     bool   `json:"agents"`         // has AGENTS.md or CLAUDE.md
 	LastCommit string `json:"last_commit"`    // YYYY-MM-DD
 	Slug       string `json:"slug,omitempty"` // owner/name of the origin remote, when it has one
+	// Worktrees are the other working copies of this same repository found in the scanned folder
+	// (git worktrees). They are one repository, not several.
+	Worktrees []string `json:"worktrees,omitempty"`
 }
 
 // Find returns the git repositories directly inside dir (and dir itself if it is one), sorted by name.
@@ -96,13 +99,14 @@ func FindDepth(dir string, depth int) ([]Repo, error) {
 	} else {
 		walk(abs, 1)
 	}
+	paths, wt := mergeWorktrees(paths)
 	var out []Repo
 	for _, p := range paths {
 		name := filepath.Base(p)
 		if rel, err := filepath.Rel(abs, p); err == nil && rel != "." && strings.Contains(rel, string(filepath.Separator)) {
 			name = filepath.ToSlash(rel)
 		}
-		r := Repo{Name: name, Path: p}
+		r := Repo{Name: name, Path: p, Worktrees: wt[p]}
 		r.Relai = exists(filepath.Join(p, "relai.yaml"))
 		r.Tracker = exists(filepath.Join(p, ".beads"))
 		r.OpenSpec = exists(filepath.Join(p, "openspec"))
@@ -118,6 +122,44 @@ func FindDepth(dir string, depth int) ([]Repo, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
+}
+
+// mergeWorktrees keeps one path per repository: the working copies sharing a git directory (git
+// worktrees) are one project. The main working copy wins (its .git is a folder); with only linked
+// copies the first path in name order stays. The others are returned under the kept path.
+func mergeWorktrees(paths []string) ([]string, map[string][]string) {
+	group := map[string][]string{}
+	var order []string
+	for _, p := range paths {
+		key := git(p, "rev-parse", "--path-format=absolute", "--git-common-dir")
+		if key == "" {
+			key = p
+		}
+		if _, ok := group[key]; !ok {
+			order = append(order, key)
+		}
+		group[key] = append(group[key], p)
+	}
+	var kept []string
+	extra := map[string][]string{}
+	for _, k := range order {
+		ps := group[k]
+		sort.Strings(ps)
+		main := ps[0]
+		for _, p := range ps {
+			if st, err := os.Stat(filepath.Join(p, ".git")); err == nil && st.IsDir() {
+				main = p
+				break
+			}
+		}
+		kept = append(kept, main)
+		for _, p := range ps {
+			if p != main {
+				extra[main] = append(extra[main], p)
+			}
+		}
+	}
+	return kept, extra
 }
 
 func isRepo(p string) bool { return exists(filepath.Join(p, ".git")) }

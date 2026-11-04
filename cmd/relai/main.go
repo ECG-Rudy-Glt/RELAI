@@ -263,7 +263,10 @@ func main() {
 		for _, n := range r.Notes {
 			fmt.Println("note:", n)
 		}
-		if !*quiet && len(r.Closed)+len(r.DeletedBranches) == 0 && len(r.Notes) == 0 {
+		if !*quiet && p.Deferred > 0 {
+			fmt.Printf("%d task(s) have a closing commit on this branch; they will be closed once it is merged into %s.\n", p.Deferred, p.Default)
+		}
+		if !*quiet && len(r.Closed)+len(r.DeletedBranches) == 0 && len(r.Notes) == 0 && p.Deferred == 0 {
 			fmt.Println("nothing to do.")
 		}
 	case "workspace":

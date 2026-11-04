@@ -28,6 +28,12 @@ the handoff is being evaluated with real agents in [`eval/`](eval/README.md).
 Made to be easy: one binary, no server, nothing but git. Useful on day one for a single person or a
 small team; the multi-project features (index, conventions) are optional layers.
 
+**Who gets what.** Measured on a real set of 16 repositories of one developer working alone with agents:
+`relai workspace` (the overview of every project, about 400 tokens) and the handoff are what pay off today.
+The team board ([RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM)) answers a problem that starts when
+several people or agents work in parallel on the same projects; with a single human it adds little. Savings
+were measured once per case: treat them as indications, not as a guarantee.
+
 ## How it fits together
 
 ```mermaid
