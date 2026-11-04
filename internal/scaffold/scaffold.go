@@ -8,10 +8,13 @@ package scaffold
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"text/template"
+	"regexp"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/initrepo"
@@ -41,29 +44,51 @@ func New(templateSrc, dir string, tokens Tokens) (initrepo.Result, error) {
 		return initrepo.Result{}, err
 	}
 	if err := Substitute(dir, tokens); err != nil {
+		removeCreated(dir)
 		return initrepo.Result{}, err
 	}
-	return initrepo.Init(dir, true)
+	r, err := initrepo.Init(dir, true)
+	if err != nil {
+		removeCreated(dir)
+		return r, err
+	}
+	return r, nil
 }
+
+// removeCreated empties dir after a failed run and removes it, so a retry is not refused because
+// of a half-filled destination. Copy only ever writes into a directory that was absent or empty,
+// so everything in it was put there by this run.
+func removeCreated(dir string) { _ = os.RemoveAll(dir) }
 
 // Copy copies every file from templateDir into dir, preserving relative paths and permissions,
 // skipping a .git directory (present when templateDir came from a cloned URL). dir must not
 // already exist, or must exist and be empty — a non-empty existing dir is refused, never merged
-// into.
-func Copy(templateDir, dir string) error {
-	if entries, err := os.ReadDir(dir); err == nil {
+// into. Symbolic links are never read through: a link that stays inside the template is recreated
+// as a link, one that points outside it (absolute, or climbing out with ..) makes the copy fail,
+// so a template cannot pull a file of the machine that instantiates it into the new repo. dir may
+// not be inside templateDir. If the copy fails, what it created is removed.
+func Copy(templateDir, dir string) (err error) {
+	if entries, rerr := os.ReadDir(dir); rerr == nil {
 		if len(entries) > 0 {
 			return fmt.Errorf("%s already exists and is not empty", dir)
 		}
-	} else if !os.IsNotExist(err) {
-		return err
+	} else if !os.IsNotExist(rerr) {
+		return rerr
+	}
+	if inside(templateDir, dir) {
+		return fmt.Errorf("destination %s is inside the template %s: copying would recurse", dir, templateDir)
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	return filepath.WalkDir(templateDir, func(p string, d fs.DirEntry, err error) error {
+	defer func() {
 		if err != nil {
-			return err
+			removeCreated(dir)
+		}
+	}()
+	return filepath.WalkDir(templateDir, func(p string, d fs.DirEntry, werr error) error {
+		if werr != nil {
+			return werr
 		}
 		if d.IsDir() && d.Name() == ".git" {
 			return filepath.SkipDir
@@ -76,45 +101,119 @@ func Copy(templateDir, dir string) error {
 			return nil
 		}
 		target := filepath.Join(dir, rel)
-		if d.IsDir() {
+		switch {
+		case d.IsDir():
 			return os.MkdirAll(target, 0o755)
+		case d.Type()&fs.ModeSymlink != 0:
+			link, err := os.Readlink(p)
+			if err != nil {
+				return err
+			}
+			if filepath.IsAbs(link) || escapes(filepath.Dir(rel), link) {
+				return fmt.Errorf("%s is a symbolic link to %s, outside the template: refusing to copy it", rel, link)
+			}
+			return os.Symlink(link, target)
+		case !d.Type().IsRegular():
+			return fmt.Errorf("%s is not a regular file, directory or link: refusing to copy it", rel)
 		}
 		info, err := d.Info()
 		if err != nil {
 			return err
 		}
-		b, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(target, b, info.Mode().Perm())
+		return copyFile(p, target, info.Mode().Perm())
 	})
 }
 
-// Substitute rewrites every regular file under dir in place, parsing it as a text/template and
-// executing it against tokens. A file that fails to parse or execute as a template — including
-// any binary file, which essentially never parses as one — is left exactly as Copy wrote it.
+// copyFile streams src to dst. The file is created writable and given its final mode afterwards,
+// so a read-only template file (0444) can still be substituted later.
+func copyFile(src, dst string, perm fs.FileMode) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm|0o200)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return os.Chmod(dst, perm)
+}
+
+// escapes reports whether the link target, resolved from the directory dirRel, leaves the tree.
+func escapes(dirRel, link string) bool {
+	r := filepath.Clean(filepath.Join(dirRel, link))
+	return r == ".." || strings.HasPrefix(r, ".."+string(filepath.Separator))
+}
+
+// inside reports whether path is dir itself or below it, comparing real paths where they exist.
+func inside(dir, path string) bool {
+	d, p := realAbs(dir), realAbs(path)
+	r, err := filepath.Rel(d, p)
+	return err == nil && (r == "." || (r != ".." && !strings.HasPrefix(r, ".."+string(filepath.Separator))))
+}
+
+// realAbs makes p absolute and resolves symbolic links in its longest existing prefix.
+func realAbs(p string) string {
+	a, err := filepath.Abs(p)
+	if err != nil {
+		return p
+	}
+	rest := ""
+	for cur := a; ; cur = filepath.Dir(cur) {
+		if r, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(r, rest)
+		}
+		if filepath.Dir(cur) == cur {
+			return a
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+	}
+}
+
+// maxSubstitute is the largest file Substitute will read: bigger ones are copied untouched.
+const maxSubstitute = 1 << 20
+
+var repoNameToken = regexp.MustCompile(`\{\{\s*\.RepoName\s*\}\}`)
+
+// Substitute rewrites {{.RepoName}} (spaces inside the braces allowed) in every text file under
+// dir. Only that token is replaced: any other {{...}} — a GitHub Actions ${{ github.sha }}, a Go
+// or Helm template — is left alone, and so is the whole file when it is binary (a NUL byte or
+// invalid UTF-8), larger than 1 MiB, or a symbolic link. A file is only written when it changes,
+// and keeps its mode, including read-only.
 func Substitute(dir string, tokens Tokens) error {
 	return filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil || d.IsDir() || !d.Type().IsRegular() {
 			return err
-		}
-		b, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		tmpl, err := template.New(filepath.Base(p)).Option("missingkey=error").Parse(string(b))
-		if err != nil {
-			return nil
-		}
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, tokens); err != nil {
-			return nil
 		}
 		info, err := d.Info()
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(p, buf.Bytes(), info.Mode().Perm())
+		if info.Size() > maxSubstitute {
+			return nil
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		if bytes.IndexByte(b, 0) >= 0 || !utf8.Valid(b) || !repoNameToken.Match(b) {
+			return nil
+		}
+		out := repoNameToken.ReplaceAll(b, []byte(tokens.RepoName))
+		perm := info.Mode().Perm()
+		if perm&0o200 == 0 {
+			if err := os.Chmod(p, perm|0o200); err != nil {
+				return err
+			}
+			defer os.Chmod(p, perm)
+		}
+		return os.WriteFile(p, out, perm|0o200)
 	})
 }
