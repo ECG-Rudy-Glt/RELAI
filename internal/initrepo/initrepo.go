@@ -40,6 +40,17 @@ func InitWith(dir string, o Options) (Result, error) {
 	}
 	name := Slug(filepath.Base(dir))
 
+	// Check what could block us before writing anything, so a refused run leaves no half-done
+	// repo behind (say, AGENTS.md written and then ".relai is a file").
+	for _, d := range []string{".relai", ".claude", filepath.Join(".claude", "hooks")} {
+		if d != ".relai" && !o.ClaudeCode {
+			continue
+		}
+		if st, err := os.Lstat(filepath.Join(dir, d)); err == nil && !st.IsDir() {
+			return r, fmt.Errorf("%s exists and is not a directory: move it away, nothing was written", d)
+		}
+	}
+
 	agents := filepath.Join(dir, "AGENTS.md")
 	claude := filepath.Join(dir, "CLAUDE.md")
 	switch {
@@ -105,7 +116,7 @@ const ClaudeSettings = `{
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh" }
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh", "timeout": 30 }
         ]
       }
     ]

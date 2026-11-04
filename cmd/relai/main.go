@@ -90,7 +90,12 @@ func main() {
 		prompt := fs.Bool("prompt", false, "print instructions for an agent to draft .relai/notes.md from what was found")
 		asJSON := fs.Bool("json", false, "print the inventory as JSON")
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
-		inv := discover.Scan(dirArg(fs))
+		target := dirArg(fs)
+		if st, err := os.Stat(target); err != nil || !st.IsDir() {
+			fmt.Fprintf(os.Stderr, "relai: %s is not a directory\n", target)
+			os.Exit(1)
+		}
+		inv := discover.Scan(target)
 		switch {
 		case *prompt:
 			fmt.Print(discover.Prompt(inv))

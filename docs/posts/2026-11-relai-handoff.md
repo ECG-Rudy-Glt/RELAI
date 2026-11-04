@@ -1,8 +1,9 @@
 # Your AI agent re-reads your whole repo every session. It doesn't have to.
 
 *Draft for review — not yet published. Adapts [`docs/DESIGN.md` §11](../DESIGN.md#11-market-scan)
-(market scan) and [`eval/README.md`](../../eval/README.md) (E2 results). Numbers are reproducible:
-run `go run ./eval/e2 -dry` against the harness yourself.*
+(market scan) and [`eval/README.md`](../../eval/README.md) (E2 results). The E2 numbers can be
+re-run with `go run ./eval/e2` (needs a logged-in `claude`, uses quota); `-dry` only builds the
+fixtures and prints the prompts. All agents tested so far are Claude models.*
 
 ## The problem
 
@@ -12,11 +13,11 @@ broke once. Today that means reading `README.md`, `TODO.md`, the journal, maybe 
 — thousands to tens of thousands of tokens, every single time, with no guarantee the agent lands
 on the actually-current state instead of a stale TODO.
 
-We measured this on a real ~420-commit infrastructure repo (51 Beads tasks, 2 OpenSpec changes):
-an agent reading instructions + TODO + journal + the current plan cold spent **~96,000 tokens**
-before doing anything. A generated handoff dropped that to **~1,700** (the handoff document itself
-is ~560 tokens). That's not a tuned best case — it's the naive path everyone's agent takes by
-default.
+We first estimated this on a real ~420-commit infrastructure repo (51 Beads tasks, 2 OpenSpec
+changes) from the *sizes* of the files a cold agent would read (~96,000 tokens) against the size of
+`AGENTS.md` plus a generated handoff (~1,700). That is an estimate of what would be read, not a
+measurement of an agent, and an agent does not read everything: when we ran real agents the gain
+was smaller (below), so treat the estimate as an upper bound on what there is to save.
 
 ## What we built
 
@@ -57,8 +58,9 @@ read-only, three conditions: the prompt alone, "read the docs first," and Relai'
 | | no context | read the docs | Relai handoff |
 |---|---|---|---|
 | Correct next step, every fixture, both models | yes | yes | yes |
-| Tokens vs "read the docs" | — | baseline | **1.6×–16× fewer** |
-| Turns to the answer | 4–30 | 4–25 | 1–4 |
+| Tokens vs "read the docs" (raw input tokens) | — | baseline | **1.6×–16× fewer**; ≥ 10× in 2 of 8 cells |
+| Cost in dollars, same runs | — | baseline | 1.2×–3.4× less (about $0.02–0.08 per session) |
+| Turns to the answer | 4–30 | 4–25 | 1–5 |
 
 The handoff only matched "read the docs" on correctness after we added two things the eval forced
 on us: flagging tasks that are still open but named in a recent commit subject (probably done,
@@ -66,9 +68,10 @@ nobody closed it), and showing blocked tasks instead of only "ready" ones. Witho
 task list made Haiku confidently wrong in one turn where reading the full docs — 16× more tokens —
 got it right. The fix cost nothing in tokens; it's in the format now.
 
-On four of our own real repos (not fixtures): where the repo has a task tracker and specs, the
-handoff gives the same answer as reading the docs for **3–4× fewer tokens**. Where it has neither,
-the handoff is barely more than `git log` and saves nothing — which is exactly why degraded mode
+On four of our own real repos (not fixtures, one run each): the one with a task tracker and specs
+gave the same answer as reading the docs for about **3× fewer tokens** (30k against 101k) — that is
+a single repo, not a trend. On the one with no tracker and no notes the handoff cost *more* (113k
+against 94k). It is barely more than `git log` there and saves nothing — which is exactly why degraded mode
 exists, and exactly why we're honest that the ceiling is bounded by what the repo already tracks,
 not by Relai.
 
