@@ -150,3 +150,22 @@ func mustLook(n string) string {
 	}
 	return p
 }
+
+func TestClosesNeedsKeywordThenIds(t *testing.T) {
+	yes := []string{"Closes p-4", "closes: p-4", "Fixes p-1, p-4", "Resolves p-1 and p-4", "feat: x\n\nCloses #p-4", "Closes relai-a7o.2", "Fix p-4."}
+	no := []string{"Fixes typo in docs, see p-4", "Closes the loop, p-4 is next", "see p-4", "Fixed a bug related to p-4", "Closes p-44"}
+	for _, m := range yes {
+		id := "p-4"
+		if strings.Contains(m, "a7o") {
+			id = "relai-a7o.2"
+		}
+		if !closes(m, id) {
+			t.Errorf("%q should close %s", m, id)
+		}
+	}
+	for _, m := range no {
+		if closes(m, "p-4") {
+			t.Errorf("%q must not close p-4", m)
+		}
+	}
+}

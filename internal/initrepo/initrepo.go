@@ -143,7 +143,11 @@ limit=${RELAI_HOOK_TIMEOUT:-60}
 if command -v timeout >/dev/null 2>&1; then
   timeout "$limit" relai tidy --apply --quiet || true
 else
-  relai tidy --apply --quiet || true
+  # no timeout(1) (macOS): a watchdog stops relai if it takes too long
+  relai tidy --apply --quiet >/dev/null 2>&1 & pid=$!
+  ( sleep "$limit"; kill "$pid" 2>/dev/null ) >/dev/null 2>&1 & dog=$!
+  wait "$pid" 2>/dev/null
+  kill "$dog" 2>/dev/null
 fi
 exit 0
 `

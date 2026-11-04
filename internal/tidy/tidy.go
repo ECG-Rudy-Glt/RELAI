@@ -34,6 +34,9 @@ type Plan struct {
 	Close     []Closure `json:"close"`
 	Named     []Closure `json:"named_not_closed"` // open tasks named in a commit without a closing keyword
 	Branches  []string  `json:"merged_branches"`
+	// Deferred counts the tasks a commit of the current (not default) branch says it closes; they are
+	// closed after the merge, not before.
+	Deferred int `json:"deferred_closures,omitempty"`
 }
 
 // Result is what Apply did.
@@ -98,6 +101,7 @@ func Build(dir string, limit int) (Plan, error) {
 	}
 	if !p.OnDefault {
 		// Work on a feature branch is not merged yet: closing its tasks now would be wrong.
+		p.Deferred = len(p.Close)
 		p.Close = nil
 	}
 	if out, err := git(dir, "branch", "--merged", p.Default, "--format=%(refname:short)"); err == nil {
@@ -112,7 +116,10 @@ func Build(dir string, limit int) (Plan, error) {
 }
 
 func closes(msg, id string) bool {
-	re := regexp.MustCompile(`(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b[:\s]+(?:[^\n]*?[\s,]|)#?` + regexp.QuoteMeta(id) + `\b`)
+	// The keyword must be followed directly by task ids ("Closes a-1, a-2 and a-3"), never by free text:
+	// "Fixes typo in docs, see a-1" mentions a-1, it does not close it.
+	tok := `#?(?:[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)+|\d+)`
+	re := regexp.MustCompile(`(?im)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b:?[ \t]+(?:` + tok + `(?:[ \t]*(?:,|&|\band\b)?[ \t]+))*#?` + regexp.QuoteMeta(id) + `(?:[^A-Za-z0-9_-]|$)`)
 	return re.MatchString(msg)
 }
 
@@ -197,8 +204,13 @@ func exportTasks(dir string) error {
 func (p Plan) Text() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "tidy (default branch: %s%s)\n", p.Default, map[bool]string{true: "", false: "; you are on another branch, so no task is closed from here"}[p.OnDefault])
+	if p.Deferred > 0 {
+		fmt.Fprintf(&b, "%d task(s) have a closing commit on this branch; they will be closed once it is merged into %s.\n", p.Deferred, p.Default)
+	}
 	if len(p.Close) == 0 && len(p.Named) == 0 && len(p.Branches) == 0 {
-		b.WriteString("nothing to do.\n")
+		if p.Deferred == 0 {
+			b.WriteString("nothing to do.\n")
+		}
 		return b.String()
 	}
 	for _, c := range p.Close {
