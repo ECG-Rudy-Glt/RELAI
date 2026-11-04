@@ -16,6 +16,8 @@ Relai is an open, agent-agnostic layer of files in git plus one CLI. No server, 
 - **shared conventions** that every repo points to, so every agent reads the same rules;
 - **links between projects**: what each repo provides and consumes, with upstream changes shown in
   the handoff;
+- **one view of all your projects** (`relai workspace`): last activity, open work and what each
+  provides, in about 800 tokens, from files only;
 - an optional **golden path**: a project template born with all of the above.
 
 It composes existing standards (AGENTS.md, Agent Skills, OpenSpec, Beads) instead of replacing them.
