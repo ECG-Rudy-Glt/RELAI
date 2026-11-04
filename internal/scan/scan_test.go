@@ -241,3 +241,28 @@ func TestWeakMentionsInConfigFilesCountMoreThanInDocuments(t *testing.T) {
 		t.Error("--min-weak 3 should make three documents enough")
 	}
 }
+
+func TestWorktreesAreOneRepo(t *testing.T) {
+	root := t.TempDir()
+	main := filepath.Join(root, "app")
+	run := func(dir string, args ...string) {
+		t.Helper()
+		c := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t"}, args...)...)
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	if err := os.MkdirAll(main, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	run(main, "init", "-q")
+	run(main, "commit", "-q", "--allow-empty", "-m", "x")
+	run(main, "worktree", "add", "-q", filepath.Join(root, "app-feature"), "-b", "feature")
+	repos, err := Find(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(repos) != 1 || repos[0].Name != "app" || len(repos[0].Worktrees) != 1 {
+		t.Fatalf("want one repo app with one worktree, got %+v", repos)
+	}
+}

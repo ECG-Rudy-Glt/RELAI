@@ -29,7 +29,7 @@ type Link struct {
 const minNameLength = 4
 
 // generated or vendored files say nothing about what a person works with.
-var excluded = []string{":!graphify-out", ":!node_modules", ":!vendor", ":!*.lock", ":!package-lock.json", ":!go.sum", ":!*.min.js", ":!*.svg"}
+var excluded = []string{":!graphify-out", ":!node_modules", ":!vendor", ":!*.lock", ":!package-lock.json", ":!go.sum", ":!*.min.js", ":!*.svg", ":!*_test.go", ":!testdata", ":!*.test.*", ":!*.spec.*"}
 
 // Links returns the mentions between the repositories, strongest first. A repository is never linked
 // to itself.
@@ -38,6 +38,10 @@ func Links(repos []Repo) []Link {
 	for _, a := range repos {
 		for _, b := range repos {
 			if a.Path == b.Path {
+				continue
+			}
+			// Two clones of the same remote are one project, not a dependency.
+			if a.Slug != "" && a.Slug == b.Slug {
 				continue
 			}
 			l := Link{From: a.Name, To: b.Name}
