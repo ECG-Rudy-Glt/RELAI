@@ -129,6 +129,11 @@ func main() {
 		exitOn(err)
 		exitOn(os.MkdirAll(filepath.Dir(*out), 0o755))
 		exitOn(os.WriteFile(*out, b, 0o644))
+		for _, e := range entries {
+			for _, w := range e.Warnings {
+				fmt.Fprintf(os.Stderr, "warning: %s: relai.yaml %s\n", e.Source, w)
+			}
+		}
 		fmt.Printf("wrote %s (%d repos, %d skipped)\n", *out, len(entries), len(skipped))
 	case "find":
 		fs := flag.NewFlagSet("find", flag.ExitOnError)

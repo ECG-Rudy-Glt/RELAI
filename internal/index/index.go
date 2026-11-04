@@ -35,6 +35,9 @@ type Manifest struct {
 type Entry struct {
 	Source    string   `json:"source"`
 	RelaiYAML Manifest `json:"relai_yaml"`
+	// Warnings lists what in the repo's relai.yaml could not be understood (never silently
+	// dropped); it is shown by `relai index build` and kept in the index.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // Skip records a listed source that could not be indexed, and why.
@@ -80,34 +83,35 @@ func ReadList(path string) ([]string, error) {
 // It never fails outright: a bad source is reported as a skip, not an error.
 func Build(sources []string) (entries []Entry, skipped []Skip) {
 	for _, src := range sources {
-		m, err := readOne(src)
+		m, warn, err := readOne(src)
 		if err != nil {
 			skipped = append(skipped, Skip{Source: src, Reason: err.Error()})
 			continue
 		}
-		entries = append(entries, Entry{Source: src, RelaiYAML: m})
+		entries = append(entries, Entry{Source: src, RelaiYAML: m, Warnings: warn})
 	}
 	return entries, skipped
 }
 
-func readOne(src string) (Manifest, error) {
+func readOne(src string) (Manifest, []string, error) {
 	path, cleanup, err := Fetch(src)
 	if err != nil {
-		return Manifest{}, err
+		return Manifest{}, nil, err
 	}
 	defer cleanup()
 	st, err := os.Stat(path)
 	if err != nil || !st.IsDir() {
-		return Manifest{}, fmt.Errorf("not found")
+		return Manifest{}, nil, fmt.Errorf("not found")
 	}
 	if _, err := exec.Command("git", "-C", path, "rev-parse", "--git-dir").Output(); err != nil {
-		return Manifest{}, fmt.Errorf("not a git repo")
+		return Manifest{}, nil, fmt.Errorf("not a git repo")
 	}
 	b, err := os.ReadFile(filepath.Join(path, "relai.yaml"))
 	if err != nil {
-		return Manifest{}, fmt.Errorf("no relai.yaml")
+		return Manifest{}, nil, fmt.Errorf("no relai.yaml")
 	}
-	return parseManifest(b), nil
+	m, warn := parseManifest(b)
+	return m, warn, nil
 }
 
 var cloneURLPattern = regexp.MustCompile(`^(https?|git|ssh|file)://|^git@`)
@@ -154,15 +158,35 @@ func cloneShallow(url string) (string, error) {
 }
 
 // ParseManifest parses the relai.yaml subset described on parseManifest. It never fails.
-func ParseManifest(b []byte) Manifest { return parseManifest(b) }
+func ParseManifest(b []byte) Manifest {
+	m, _ := ParseManifestWarn(b)
+	return m
+}
+
+// ParseManifestWarn is ParseManifest plus a list of things it could not understand, so a caller
+// can say so instead of letting a capability vanish silently (which makes relai find answer
+// "nothing provides X" and invites a duplicate).
+func ParseManifestWarn(b []byte) (Manifest, []string) { return parseManifest(b) }
 
 // parseManifest reads the small subset of YAML that relai.yaml uses: flat scalar keys, inline
-// bracket lists, and one-level block lists of single-key maps (provides:/consumes:). It never
-// fails; keys it cannot parse are left at their zero value, matching the project's "stdlib only,
-// no new dependency for a format this constrained" stance.
-func parseManifest(b []byte) Manifest {
+// bracket lists, and provides:/consumes: lists in any of these shapes:
+//
+//	provides:                      provides: [a, b]
+//	  - capability: a              provides: [{capability: a}, {capability: b}]
+//	  - a                          provides:
+//	  # comments and blank lines      - id: x
+//	  - id: x                          capability: a   (capability: in any key position)
+//	    capability: b
+//
+// It never fails; a key it cannot make sense of is reported in the warnings and left at its zero
+// value. That matches the project's "stdlib only, no dependency for a format this constrained"
+// stance, with the rule that nothing is dropped without a message.
+func parseManifest(b []byte) (Manifest, []string) {
 	var m Manifest
-	lines := strings.Split(string(b), "\n")
+	var warn []string
+	text := strings.TrimPrefix(string(b), "\ufeff")
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	lines := strings.Split(text, "\n")
 	for i := 0; i < len(lines); i++ {
 		key, rest, ok := splitKV(lines[i])
 		if !ok {
@@ -172,30 +196,48 @@ func parseManifest(b []byte) Manifest {
 		case "apiVersion":
 			m.APIVersion = unquote(rest)
 		case "id":
-			m.ID = unquote(rest)
+			m.ID = scalar(rest, "id", &warn)
 		case "summary":
 			m.Summary = unquote(rest)
 		case "owners":
 			if rest != "" {
 				m.Owners = inlineList(rest)
 			}
-		case "provides":
+		case "provides", "consumes":
 			var caps []Capability
-			i, caps = blockList(lines, i)
-			m.Provides = caps
-		case "consumes":
-			var caps []Capability
-			i, caps = blockList(lines, i)
-			m.Consumes = caps
+			var w []string
+			i, caps, w = capabilityList(lines, i, rest)
+			for _, x := range w {
+				warn = append(warn, key+": "+x)
+			}
+			if len(caps) == 0 && len(w) == 0 && rest != "" && rest != "[]" && rest != "~" && rest != "null" {
+				warn = append(warn, key+": value "+rest+" was not understood")
+			}
+			if key == "provides" {
+				m.Provides = caps
+			} else {
+				m.Consumes = caps
+			}
 		}
 	}
-	return m
+	return m, warn
+}
+
+// scalar returns an unquoted scalar, refusing a value that looks like an unfinished flow
+// collection (id: [unclosed), which would otherwise be used as if it were a name.
+func scalar(rest, key string, warn *[]string) string {
+	v := unquote(rest)
+	if len(v) > 0 && (v[0] == '[' || v[0] == '{') && rest == v {
+		*warn = append(*warn, key+": value "+rest+" is not a plain name")
+		return ""
+	}
+	return v
 }
 
 // splitKV splits a top-level "key: value" line (no leading indentation), stripping a trailing
 // unquoted comment. ok is false for blank lines, comments, or indented (nested) lines.
 func splitKV(line string) (key, value string, ok bool) {
-	if line == "" || line[0] == ' ' || line[0] == '\t' || line[0] == '#' {
+	if line == "" || line[0] == ' ' || line[0] == '\t' || line[0] == '#' || line[0] == '-' {
 		return "", "", false
 	}
 	idx := strings.Index(line, ":")
@@ -207,26 +249,116 @@ func splitKV(line string) (key, value string, ok bool) {
 	return key, value, true
 }
 
-// blockList consumes the "  - capability: x" lines following a "provides:"/"consumes:" header at
-// lines[start], returning the index of the last line consumed and the parsed capabilities.
-func blockList(lines []string, start int) (int, []Capability) {
-	var out []Capability
+// capabilityList reads the value of a provides:/consumes: key whose header is at lines[start]
+// (rest is what follows the colon), returning the index of the last line consumed.
+func capabilityList(lines []string, start int, rest string) (int, []Capability, []string) {
+	var caps []Capability
+	var warn []string
+	if rest != "" {
+		if !strings.HasPrefix(rest, "[") || !strings.HasSuffix(rest, "]") {
+			return start, nil, nil // not a list; the caller reports it
+		}
+		inner := strings.TrimSpace(rest[1 : len(rest)-1])
+		for _, part := range splitTop(inner) {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") {
+				found := false
+				for _, kv := range splitTop(part[1 : len(part)-1]) {
+					if k, v, ok := keyValue(kv); ok && k == "capability" {
+						caps = append(caps, Capability{Capability: unquote(v)})
+						found = true
+					}
+				}
+				if !found {
+					warn = append(warn, "entry "+part+" has no capability: key")
+				}
+				continue
+			}
+			caps = append(caps, Capability{Capability: unquote(part)})
+		}
+		return start, caps, warn
+	}
 	i := start
+	inItem, got := false, false
 	for i+1 < len(lines) {
 		l := lines[i+1]
-		trimmed := strings.TrimSpace(l)
-		if l == "" || (len(l) > 0 && (l[0] != ' ' && l[0] != '\t')) {
-			break
-		}
-		if !strings.HasPrefix(trimmed, "- ") {
-			break
-		}
-		if _, v, ok := splitKV(strings.TrimPrefix(trimmed, "- ")); ok {
-			out = append(out, Capability{Capability: unquote(v)})
+		t := strings.TrimSpace(stripComment(l))
+		raw := strings.TrimSpace(l)
+		switch {
+		case raw == "" || strings.HasPrefix(raw, "#"):
+			i++
+			continue
+		case !strings.HasPrefix(l, " ") && !strings.HasPrefix(l, "\t") && !strings.HasPrefix(l, "-"):
+			return i, caps, warn // next top-level key
+		case strings.HasPrefix(t, "- ") || t == "-":
+			if inItem && !got {
+				warn = append(warn, "a list entry has no capability: key")
+			}
+			inItem, got = true, false
+			item := strings.TrimSpace(strings.TrimPrefix(t, "-"))
+			if item == "" {
+				break
+			}
+			if k, v, ok := keyValue(item); ok && !strings.HasPrefix(item, "\"") && !strings.HasPrefix(item, "'") {
+				if k == "capability" {
+					caps = append(caps, Capability{Capability: unquote(v)})
+					got = true
+				}
+			} else {
+				caps = append(caps, Capability{Capability: unquote(item)})
+				got = true
+			}
+		default: // continuation line of the current entry
+			if k, v, ok := keyValue(t); ok && k == "capability" && inItem && !got {
+				caps = append(caps, Capability{Capability: unquote(v)})
+				got = true
+			}
 		}
 		i++
 	}
-	return i, out
+	if inItem && !got {
+		warn = append(warn, "a list entry has no capability: key")
+	}
+	return i, caps, warn
+}
+
+// keyValue splits "key: value" (any indentation) without treating a quoted string as a key.
+func keyValue(s string) (key, value string, ok bool) {
+	s = strings.TrimSpace(s)
+	idx := strings.Index(s, ":")
+	if idx <= 0 {
+		return "", "", false
+	}
+	return strings.TrimSpace(s[:idx]), stripComment(strings.TrimSpace(s[idx+1:])), true
+}
+
+// splitTop splits on commas that are not inside braces, brackets or quotes.
+func splitTop(s string) []string {
+	var out []string
+	depth, start := 0, 0
+	var q byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case q != 0:
+			if c == q {
+				q = 0
+			}
+		case c == '"' || c == '\'':
+			q = c
+		case c == '{' || c == '[':
+			depth++
+		case c == '}' || c == ']':
+			depth--
+		case c == ',' && depth == 0:
+			out = append(out, s[start:i])
+			start = i + 1
+		}
+	}
+	return append(out, s[start:])
 }
 
 func inlineList(s string) []string {
