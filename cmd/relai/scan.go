@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scan"
@@ -22,12 +21,11 @@ func scanSources(dirs []string, depth int, w io.Writer) ([]string, error) {
 			return nil, err
 		}
 		var kept []scan.Repo
+		already := 0
 		for _, r := range repos {
-			key := r.Path
-			if real, err := filepath.EvalSymlinks(r.Path); err == nil {
-				key = real
-			}
+			key := scan.Identity(r.Path) // a symbolic link or a worktree of a repository already found is that repository
 			if seen[key] {
+				already++
 				continue
 			}
 			seen[key] = true
@@ -41,6 +39,9 @@ func scanSources(dirs []string, depth int, w io.Writer) ([]string, error) {
 			}
 		}
 		fmt.Fprintf(w, "scan: %d repositories in %s, %d with a relai.yaml", len(kept), dir, len(kept)-len(without))
+		if already > 0 {
+			fmt.Fprintf(w, "; %d already counted from a previous folder", already)
+		}
 		if len(without) > 0 {
 			fmt.Fprintf(w, "; without one (skipped, run `relai init` there to include them): %s", strings.Join(without, ", "))
 		}

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -87,13 +88,36 @@ func TestScanSourcesMissingFolder(t *testing.T) {
 	}
 }
 
+var (
+	binOnce sync.Once
+	binPath string
+	binErr  string
+)
+
+// builtBinary builds the real binary once for all the end-to-end tests of the package.
+func builtBinary(t *testing.T) string {
+	t.Helper()
+	binOnce.Do(func() {
+		dir, err := os.MkdirTemp("", "relai-bin")
+		if err != nil {
+			binErr = err.Error()
+			return
+		}
+		binPath = filepath.Join(dir, "relai")
+		if out, err := exec.Command("go", "build", "-o", binPath, ".").CombinedOutput(); err != nil {
+			binErr = err.Error() + "\n" + string(out)
+		}
+	})
+	if binErr != "" {
+		t.Fatalf("build: %s", binErr)
+	}
+	return binPath
+}
+
 // runIndexBuild builds the real binary once per test and runs `relai index build` with args.
 func runIndexBuild(t *testing.T, args ...string) (string, []string) {
 	t.Helper()
-	bin := filepath.Join(t.TempDir(), "relai")
-	if out, err := exec.Command("go", "build", "-o", bin, ".").CombinedOutput(); err != nil {
-		t.Fatalf("build: %v\n%s", err, out)
-	}
+	bin := builtBinary(t)
 	idx := filepath.Join(t.TempDir(), "index.json")
 	cmd := exec.Command(bin, append([]string{"index", "build", "-o", idx}, args...)...)
 	out, err := cmd.CombinedOutput()
@@ -158,5 +182,51 @@ func TestIndexBuildScansWithListFile(t *testing.T) {
 	_, sources := runIndexBuild(t, "--scan", a, "--scan", b, list)
 	if len(sources) != 3 {
 		t.Fatalf("list file and both scans must add up, got %v", sources)
+	}
+}
+
+func TestIndexBuildListAndScanNameTheSameRepoOnce(t *testing.T) {
+	root := t.TempDir()
+	one := mkRepo(t, root, "one")
+	list := filepath.Join(t.TempDir(), "list.txt")
+	if err := os.WriteFile(list, []byte(one+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, sources := runIndexBuild(t, "--scan", root, list)
+	if len(sources) != 1 {
+		t.Fatalf("a repository named by the list and by a scan must be indexed once, got %v", sources)
+	}
+	if !strings.Contains(out, "same repository as") {
+		t.Errorf("the second name should be reported:\n%s", out)
+	}
+}
+
+func TestScanSourcesWorktreeInAnotherFolderIsTheSameRepo(t *testing.T) {
+	root := t.TempDir()
+	a, b := filepath.Join(root, "a"), filepath.Join(root, "b")
+	main := mkRepo(t, a, "app")
+	if err := os.MkdirAll(b, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	git := func(args ...string) {
+		t.Helper()
+		c := exec.Command("git", append([]string{"-C", main, "-c", "user.name=t", "-c", "user.email=t@t"}, args...)...)
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	git("add", ".")
+	git("commit", "-q", "-m", "x")
+	git("worktree", "add", "-q", filepath.Join(b, "app-feature"), "-b", "feature")
+	var out bytes.Buffer
+	got, err := scanSources([]string{a, b}, 1, &out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != main {
+		t.Fatalf("the worktree in folder b is the repository of folder a: want [%s], got %v", main, got)
+	}
+	if !strings.Contains(out.String(), "1 already counted") {
+		t.Errorf("the overlap should be said:\n%s", out.String())
 	}
 }
