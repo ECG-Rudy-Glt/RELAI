@@ -52,3 +52,13 @@ func containsDashDash(args []string) bool {
 	}
 	return false
 }
+
+// stringList is a flag that can be given several times; every value is kept, in order.
+type stringList []string
+
+func (l *stringList) String() string { return strings.Join(*l, ",") }
+
+func (l *stringList) Set(v string) error {
+	*l = append(*l, v)
+	return nil
+}

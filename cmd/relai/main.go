@@ -33,8 +33,9 @@ Usage:
   relai handoff [dir]    print the current state of the work (≤ 2,000 tokens by default)
   relai discover [dir]   list what the project already gives agents (skills, hooks, specs, docs…);
                          --prompt prints instructions for your agent to draft .relai/notes.md
-  relai index build [-o <path>] [--scan <folder>] [<list-file>]
-                         read each repo path/URL in <list-file> (and/or every git repo in --scan <folder>)
+  relai index build [-o <path>] [--scan <folder>]... [--depth N] [<list-file>]
+                         read each repo path/URL in <list-file> (and/or every git repo in each --scan <folder>;
+                         repeat --scan to cover several folders, a repo reached by several of them is indexed once)
                          and collect their relai.yaml into an index (default: .relai/index.json)
   relai discover --links <folder> [--depth N] [--propose [--min-weak N] | --prompt] [--json]
                          mentions between the git repos of <folder> (strong: remote URL or relative path;
@@ -154,11 +155,12 @@ func main() {
 		}
 		fs := flag.NewFlagSet("index build", flag.ExitOnError)
 		out := fs.String("o", defaultIndexPath, "write the index to this file")
-		scanDir := fs.String("scan", "", "find the git repositories in this folder instead of (or in addition to) a list file")
+		var scanDirs stringList
+		fs.Var(&scanDirs, "scan", "find the git repositories in this folder instead of (or in addition to) a list file; repeatable")
 		scanDepth := fs.Int("depth", 1, "with --scan: how many folder levels to look down for repositories")
 		_ = fs.Parse(reorderArgs(fs, os.Args[3:]))
-		if fs.NArg() < 1 && *scanDir == "" {
-			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] [--scan <folder>] [<list-file>]")
+		if fs.NArg() < 1 && len(scanDirs) == 0 {
+			fmt.Fprintln(os.Stderr, "usage: relai index build [-o <path>] [--scan <folder>]... [<list-file>]")
 			os.Exit(2)
 		}
 		var sources []string
@@ -167,21 +169,10 @@ func main() {
 			sources, err = index.ReadList(fs.Arg(0))
 			exitOn(err)
 		}
-		if *scanDir != "" {
-			repos, err := scan.FindDepth(*scanDir, *scanDepth)
+		if len(scanDirs) > 0 {
+			scanned, err := scanSources(scanDirs, *scanDepth, os.Stdout)
 			exitOn(err)
-			var without []string
-			for _, r := range repos {
-				sources = append(sources, r.Path)
-				if !r.Relai {
-					without = append(without, r.Name)
-				}
-			}
-			fmt.Printf("scan: %d repositories in %s, %d with a relai.yaml", len(repos), *scanDir, len(repos)-len(without))
-			if len(without) > 0 {
-				fmt.Printf("; without one (skipped, run `relai init` there to include them): %s", strings.Join(without, ", "))
-			}
-			fmt.Println()
+			sources = append(sources, scanned...)
 		}
 		entries, skipped := index.Build(sources)
 		for _, sk := range skipped {

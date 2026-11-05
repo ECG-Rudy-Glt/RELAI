@@ -162,6 +162,25 @@ func mergeWorktrees(paths []string) ([]string, map[string][]string) {
 	return kept, extra
 }
 
+// Identity says which repository a path is: two paths with the same identity are the same repository (a
+// symbolic link, a path written two ways, or git worktrees of one repository). A path that is not a local
+// repository (a clone URL, a missing folder) is its own identity.
+func Identity(p string) string {
+	if st, err := os.Stat(p); err != nil || !st.IsDir() {
+		return p
+	}
+	if key := git(p, "rev-parse", "--path-format=absolute", "--git-common-dir"); key != "" {
+		if real, err := filepath.EvalSymlinks(key); err == nil {
+			return real
+		}
+		return key
+	}
+	if real, err := filepath.EvalSymlinks(p); err == nil {
+		return real
+	}
+	return p
+}
+
 func isRepo(p string) bool { return exists(filepath.Join(p, ".git")) }
 
 func exists(p string) bool { _, err := os.Stat(p); return err == nil }

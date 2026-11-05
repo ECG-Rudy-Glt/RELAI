@@ -146,6 +146,7 @@ You do not have to write the list of your projects by hand:
 
 ```sh
 relai index build --scan ~/projects      # every git repo of the folder (symlinks included); says which need `relai init`
+relai index build --scan ~/work --scan ~/oss # --scan is repeatable and adds up (also with a list file and --depth); a repo reached by several --scan folders is indexed once
 relai discover --links ~/projects        # the mentions between them: who points at whom, and how strongly
 relai discover --links ~/projects --depth 2  # also look one folder deeper (nested repos are named by path)
 relai discover --links ~/projects --prompt   # instructions for your agent to check each mention with you

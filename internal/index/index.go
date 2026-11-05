@@ -9,6 +9,7 @@ package index
 import (
 	"bytes"
 	"fmt"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/scan"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -122,7 +123,16 @@ func ReadList(path string) ([]string, error) {
 // returns the entries it could read plus the sources it had to skip, with a reason for each.
 // It never fails outright: a bad source is reported as a skip, not an error.
 func Build(sources []string) (entries []Entry, skipped []Skip) {
+	first := map[string]string{} // identity of a repository -> the source that named it first
 	for _, src := range sources {
+		// The same repository named twice (a list file and a scanned folder, a symbolic link, a worktree) is
+		// indexed once, and the second name is reported.
+		id := scan.Identity(src)
+		if prev, dup := first[id]; dup {
+			skipped = append(skipped, Skip{Source: src, Reason: "same repository as " + prev})
+			continue
+		}
+		first[id] = src
 		m, warn, err := readOne(src)
 		if err != nil {
 			skipped = append(skipped, Skip{Source: src, Reason: err.Error()})
