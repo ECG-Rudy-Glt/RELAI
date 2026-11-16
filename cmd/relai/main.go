@@ -63,6 +63,14 @@ Usage:
   relai tidy [--apply] [dir]
                          after work is merged: close the tasks a commit says it closes ("Closes <id>"), refresh
                          .beads/issues.jsonl, delete fully merged local branches. Dry run unless --apply; never commits
+  relai sync [--apply] [--refresh] [dir]
+                         vendor the shared conventions of the hub pinned by "conventions: <hub>@<tag>" in relai.yaml:
+                         .relai/conventions.md, a managed block in AGENTS.md, hub-* skills, a CI job once.
+                         Dry run unless --apply; never commits
+  relai check [--outdated] [--strict] [--json] [dir]
+                         relai validate + the handoff budget + drift from the hub at the pinned tag (hand edits
+                         of vendored files); --outdated warns about a newer hub tag. Made for CI
+  relai hub init <dir>   scaffold a hub (CONVENTIONS.md, a skill, CI templates) in an empty directory
   relai new <template> <dir>
                          scaffold <dir> from <template> (a local path or clone URL), substituting
                          {{.RepoName}} etc. in its text files, then filling in anything the
@@ -369,6 +377,12 @@ func main() {
 		}
 		fmt.Println()
 		fmt.Println(indexNextStep(dir))
+	case "sync":
+		os.Exit(cmdSync(os.Args[2:], os.Stdout, os.Stderr))
+	case "check":
+		os.Exit(cmdCheck(os.Args[2:], os.Stdout, os.Stderr))
+	case "hub":
+		os.Exit(cmdHub(os.Args[2:], os.Stdout, os.Stderr))
 	case "version", "--version", "-v":
 		fmt.Println("relai", version)
 	case "help", "-h", "--help":

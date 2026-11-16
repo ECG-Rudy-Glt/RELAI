@@ -13,10 +13,12 @@ import (
 	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
 )
 
-// Levels of a finding. An error makes `relai validate` fail; a warning does only with --strict.
+// Levels of a finding. An error makes `relai validate` fail; a warning does only with --strict;
+// an info is only listed (a declared override, a skipped file) and never fails.
 const (
 	Error   = "error"
 	Warning = "warning"
+	Info    = "info"
 )
 
 // MaxAgentsLines is the budget of AGENTS.md (docs/DESIGN.md §4: read at every session, so kept short).
@@ -140,10 +142,11 @@ func lineCount(b []byte) int {
 	return n
 }
 
-// Failed reports whether the findings make the check fail: any error, or any finding when strict.
+// Failed reports whether the findings make the check fail: any error, or any warning when strict.
+// An info never fails.
 func Failed(f []Finding, strict bool) bool {
 	for _, x := range f {
-		if strict || x.Level == Error {
+		if x.Level == Error || (strict && x.Level == Warning) {
 			return true
 		}
 	}
@@ -156,13 +159,20 @@ func Text(f []Finding) string {
 		return "ok: relai.yaml, AGENTS.md and .relai/notes.md follow the contract.\n"
 	}
 	var b strings.Builder
-	errs := 0
+	errs, infos := 0, 0
 	for _, x := range f {
-		if x.Level == Error {
+		switch x.Level {
+		case Error:
 			errs++
+		case Info:
+			infos++
 		}
 		fmt.Fprintf(&b, "%s: %s: %s\n", x.File, x.Level, x.Message)
 	}
-	fmt.Fprintf(&b, "%d error(s), %d warning(s).\n", errs, len(f)-errs)
+	fmt.Fprintf(&b, "%d error(s), %d warning(s)", errs, len(f)-errs-infos)
+	if infos > 0 {
+		fmt.Fprintf(&b, ", %d info", infos)
+	}
+	b.WriteString(".\n")
 	return b.String()
 }
