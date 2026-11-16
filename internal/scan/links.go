@@ -33,7 +33,27 @@ var excluded = []string{":!graphify-out", ":!node_modules", ":!vendor", ":!*.loc
 
 // Links returns the mentions between the repositories, strongest first. A repository is never linked
 // to itself.
-func Links(repos []Repo) []Link {
+func Links(repos []Repo) []Link { return LinksWith(repos, DefaultOptions()) }
+
+// Options switches the rules that keep weak evidence precise. DefaultOptions is what relai ships.
+type Options struct {
+	// SkipOwnDocs ignores, for weak evidence only, a repository's own task, notes, spec and handoff files:
+	// they quote the names of other repositories without working with them.
+	SkipOwnDocs bool
+	// WordMaxLen: a name that is one lowercase word (letters only, no digit, dash, underscore or dot) of at most
+	// this many letters is "ordinary"; it is then only a weak mention in a path-like context. 0 turns the rule off.
+	WordMaxLen int
+}
+
+// DefaultOptions is the shipped behaviour.
+func DefaultOptions() Options { return Options{SkipOwnDocs: true, WordMaxLen: DefaultWordMaxLen} }
+
+// DefaultWordMaxLen: measured on 14 repositories, 8 caught one false mention and no true one (the ordinary-word names
+// there have 9-10 letters); 10, 12 and no limit gave the same result. 12 keeps long coined names out of the rule.
+const DefaultWordMaxLen = 12
+
+// LinksWith is Links with explicit rules. Strong evidence is never affected by Options.
+func LinksWith(repos []Repo, opt Options) []Link {
 	var out []Link
 	for _, a := range repos {
 		for _, b := range repos {
@@ -59,7 +79,7 @@ func Links(repos []Repo) []Link {
 			l.Strong = len(strong)
 			weak := map[string]bool{}
 			if len(b.match()) >= minNameLength {
-				for _, f := range grep(a.Path, b.match(), true) {
+				for _, f := range weakFiles(a.Path, b.match(), opt) {
 					weak[f] = true
 					if configLike(f) {
 						l.WeakConfig++
@@ -136,11 +156,45 @@ func grepRegexp(dir, pattern string) []string {
 	return runGrep([]string{"-C", dir, "--no-optional-locks", "grep", "-l", "-I", "-E"}, pattern)
 }
 
-func runGrep(args []string, pattern string) []string {
+// ownDocs are a repository's own task, notes, spec and handoff files.
+var ownDocs = []string{":!.relai", ":!.beads", ":!openspec", ":(exclude,icase,glob)**/todo*", ":(exclude,icase,glob)**/tasks*",
+	":(exclude,icase,glob)**/*handoff*", ":(exclude,icase,glob)**/*passation*"}
+
+// isOrdinaryWord says whether a repository name looks like a plain word: letters only, all lowercase
+// (a name with a capital, digit, dash, underscore or dot is distinctive), at most maxLen letters.
+func isOrdinaryWord(name string, maxLen int) bool {
+	if maxLen <= 0 || len(name) > maxLen {
+		return false
+	}
+	for _, r := range name {
+		if r < 'a' || r > 'z' {
+			return false
+		}
+	}
+	return true
+}
+
+// weakFiles lists the files of dir that mention name as a word. An ordinary-word name only counts in a
+// path-like context: a slash right before or after it, or a ".git" suffix.
+func weakFiles(dir, name string, opt Options) []string {
+	var extra []string
+	if opt.SkipOwnDocs {
+		extra = ownDocs
+	}
+	if isOrdinaryWord(name, opt.WordMaxLen) {
+		q := regexp.QuoteMeta(name)
+		return runGrep([]string{"-C", dir, "--no-optional-locks", "grep", "-l", "-I", "-i", "-E"},
+			`(/`+q+`([^A-Za-z0-9_-]|$)|(^|[^A-Za-z0-9_-])`+q+`/|`+q+`\.git)`, extra...)
+	}
+	return runGrep([]string{"-C", dir, "--no-optional-locks", "grep", "-l", "-I", "-i", "-F", "-w"}, name, extra...)
+}
+
+func runGrep(args []string, pattern string, extra ...string) []string {
 	args = append(args, "-e", pattern, "--", ".")
 	for _, e := range excluded {
 		args = append(args, e)
 	}
+	args = append(args, extra...)
 	cmd := exec.Command("git", args...)
 	done := make(chan []byte, 1)
 	go func() { out, _ := cmd.Output(); done <- out }() // exit 1 means no match
@@ -186,8 +240,8 @@ func Text(dir string, repos []Repo, links []Link) string {
 }
 
 // DefaultMinWeak is how many files must mention a name, in documents only, before it is worth proposing
-// without strong evidence. A name in two or more CI/deployment/configuration files is proposed without it.
-const DefaultMinWeak = 5
+// without strong evidence (2 since the weak rules above: 82% recall at 98% precision on two folders, see eval/results). A name in two or more CI/deployment/configuration files is proposed without it.
+const DefaultMinWeak = 2
 
 // minWeakConfig is how many CI/deploy/config files naming a repository are enough to propose it.
 const minWeakConfig = 2
@@ -221,10 +275,14 @@ func Propose(repos []Repo, links []Link, minWeak int) string {
 			if l.Strong > 0 {
 				conf = fmt.Sprintf("strong: %d files", l.Strong)
 			}
+			// One kind of name per line: the relai.yaml id when the repository has one, else its folder name
+			// (marked, since a links: entry must be an id once the repository has run relai init).
 			id := l.To
 			for _, o := range repos {
 				if o.Name == l.To && o.ID != "" {
 					id = o.ID
+				} else if o.Name == l.To {
+					conf += "; folder name, no relai.yaml yet"
 				}
 			}
 			fmt.Fprintf(&b, "  - %s   # %s\n", id, conf)
