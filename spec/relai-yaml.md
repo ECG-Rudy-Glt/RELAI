@@ -31,7 +31,7 @@ links: [billing-api]
 | `provides` | no | list of capabilities | What this repository offers to others. |
 | `consumes` | no | list of capabilities | What it needs from others. |
 | `links` | no | list of `id`s | The repositories it works with, declared by a person. |
-| `conventions` | no | text | Reserved: the shared conventions the repository follows. Readers keep it as text. |
+| `conventions` | no | text | The hub of shared conventions the repository pins, as one line `<hub>@<tag>` (a clone URL or local path, a git tag; split on the last `@`). `relai sync` vendors it, `relai check` compares with it. Other readers keep it as text. |
 | `tasks` | no | `beads` or `github` | Where the tasks live, when the files do not show it. `github` lets `relai handoff` list the open GitHub issues with the `gh` command, the only network call it can make. |
 
 A **capability** is a dotted lowercase name going from general to specific, such as `auth.oidc` or

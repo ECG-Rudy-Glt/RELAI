@@ -1,7 +1,9 @@
 # Relai across many repos and CI systems
 
-> Status: proposal (2026-11-03), to be reviewed before implementation. **The commands named here
-> (`relai sync`, `relai check`, `consumers`) do not exist yet.** Phase 2 of
+> Status: **built** (2026-11-16): `relai hub init`, `relai sync` and `relai check` exist; the
+> decisions are in `openspec/changes/shared-conventions-hub/design.md`. Where this document says
+> otherwise, the sections below have been brought in line (§4, §10); `consumers`, shared hooks, pull
+> request automation and per-repo skill selection are **not** built. Phase 2 of
 > [`DESIGN.md`](DESIGN.md). Same constraints as the rest of Relai: git only, one binary, no server,
 > no portal.
 
@@ -76,38 +78,48 @@ that works for every agent.
 
 ## 4. In each repo
 
-`relai.yaml` pins the hub:
+`relai.yaml` pins the hub on **one line** (the file format has no nested mappings):
 
 ```yaml
-conventions:
-  hub: https://forge.example/team/team-hub.git
-  version: v3          # a git tag of the hub
-  skills: [secrets-handling, commit-style]   # which shared skills to install; default: all
+conventions: https://forge.example/team/team-hub.git@v3   # <hub>@<tag>, split on the last @
 ```
 
-`relai sync` (run by a person, or by a scheduled job that opens a pull request):
+`relai sync` is a **dry run**: it prints what it would change. `relai sync --apply` does it, and
+never commits; a person reviews the diff and commits. `--refresh` fetches the hub again instead of
+using the cached copy. It:
 
-- fetches the hub at the pinned tag into a local cache;
-- rewrites only the **managed blocks**, delimited by markers, and never touches anything else:
+- fetches the hub at the pinned tag (`git clone --depth 1 --branch <tag>`) into the user cache
+  directory, never into the repository;
+- writes the hub's `CONVENTIONS.md` as a whole file, `.relai/conventions.md`, which starts with one
+  generated-marker line. It is not pasted into `AGENTS.md`, whose 100-line budget it would eat;
+- keeps a **three-line managed block** in `AGENTS.md` that points to that file, and touches nothing
+  else in `AGENTS.md` (the block goes before the first `## ` heading, or at the end; `AGENTS.md` is
+  never created; it is written through a symbolic link that stays inside the repository):
 
   ```markdown
-  <!-- relai:conventions hub@v3 — managed by `relai sync`, edit the hub instead -->
-  …content of CONVENTIONS.md…
+  <!-- relai:conventions <hub>@v3 — managed by `relai sync`, edit the hub instead -->
+  Shared conventions of the hub: [.relai/conventions.md](.relai/conventions.md). The local rules of this file come after them and win.
   <!-- /relai:conventions -->
-
-  ## This repo
-  …local rules, written by hand…
   ```
 
-- installs the selected shared skills under a prefix (`.claude/skills/hub-<name>/`, and
-  `.agents/skills/` for other agents), so local skills keep their names;
-- adds the CI template for the repo's CI system **once**, if the repo has none (it detects
-  `.github/`, `.forgejo/`, `.gitea/`, `.gitlab-ci.yml` with `relai discover`);
-- prints a diff; a person reviews and commits.
+- copies every hub `skills/<name>/` to `.claude/skills/hub-<name>/` and `.agents/skills/hub-<name>/`
+  (local skills keep their names), and removes a `hub-*` folder the hub no longer has;
+- installs the CI job **once**, when the file is absent, for the CI folder the repository already has:
+  `ci/github.yml` to `.github/workflows/relai.yml`, `ci/forgejo.yml` to `.forgejo/workflows/relai.yml`
+  or `.gitea/workflows/relai.yml`. For GitLab it prints the lines to add and never edits
+  `.gitlab-ci.yml`. A repository with none of these gets no CI file.
 
-**Precedence**, from weakest to strongest: hub conventions → the repo's local rules → a
-subdirectory `AGENTS.md`. A repo that departs from a hub rule says so in its local rules, with the
-reason; `relai check` lists those overrides so they stay visible.
+Hub content is untrusted. Names containing `..`, symbolic links (skipped and reported, never
+followed) and files over 1 MiB are not copied, and `sync` writes only to the paths listed above,
+inside the repository.
+
+**Precedence**, from weakest to strongest: hub conventions, the repo's local rules, a
+subdirectory `AGENTS.md`. A repo that departs from a hub rule says so in a local line that starts
+with `Override:` and gives the reason; `relai check` lists those lines (level "info", never a failure)
+so they stay visible.
+
+`relai hub init <dir>` creates a hub in an empty directory (a conventions file, one sample skill,
+the three CI templates, `repos.txt`); commit it and tag a version.
 
 ## 5. CI, whatever the system
 
@@ -168,11 +180,14 @@ and *upstream changes*, which need the links between projects of phase 2.
 
 ## 10. Open questions
 
-1. Managed blocks in `AGENTS.md` only, or also in `CLAUDE.md` when it is not a link to
-   `AGENTS.md`?
-2. Shared hooks: vendored scripts plus a settings snippet merged into `.claude/settings.json`, or
-   only documented, since merging JSON settings is more invasive?
-3. Should `relai sync` open the pull request itself (needs a forge token) or leave it to the
-   existing bots (Renovate can bump a version in `relai.yaml`)?
-4. Test bed: the author's repos span GitHub (Actions) and a self-hosted Forgejo (Actions), which
-   covers two CI systems; GitLab needs a test repo.
+Decided on 2026-11-16 (see the design of the change `shared-conventions-hub`):
+
+1. `AGENTS.md` only for the managed block; `CLAUDE.md` is left alone (it is usually a link to it).
+2. Shared hooks are **not** synced in this version: merging JSON settings is invasive.
+3. `relai sync` does not open the pull request; a bot (Renovate can bump the tag in `relai.yaml`)
+   or a person does.
+4. The CI templates for GitHub and Forgejo/Gitea are the same job; the GitLab one is untested, and a
+   GitLab test repository is still needed.
+
+Still open: per-repo skill selection (all hub skills are installed), the `consumers` command, and
+the upstream-changes section of the workspace view.

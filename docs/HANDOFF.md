@@ -30,8 +30,9 @@ no central service, no Backstage, no federation or SSO.
 | Measured 2026-11-16 | `eval/results/`: on the owner's folders, strong mentions were true 28 times out of 28, weak ones about 6 to 7 times out of 10 (poor when a repository's name is an ordinary word); `--propose` proposed 6 links, all true, but only 22% of the true ones (85% with `--min-weak 2`). `relai workspace` answered 3 questions out of 3 in one turn each; the comparison arm was spoiled by tool permissions, so "replaces the handoffs" is not shown. The five real-world checks pass; nothing was run on macOS or Windows |
 | Licence | Apache-2.0 |
 
-Not done yet: a test with a non-Claude agent; phases 2-4 of `docs/multi-repo.md` (hub,
-`relai sync`, `relai check` -- those commands do not exist yet, the document is a proposal); the
+Not done yet: a test with a non-Claude agent; phases 3-4 of `docs/multi-repo.md` and the rest of
+phase 2 (`relai consumers`, shared hooks, per-repo skill selection; the hub, `relai sync`,
+`relai check` and `relai hub init` are built but have not been used on real repositories); the
 launch post (`docs/posts/`) is a draft, to be checked against the measured numbers before any
 publication (`relai-a7e`).
 
@@ -48,7 +49,7 @@ publication (`relai-a7e`).
   truncation of lists, never by rewording. An LLM may only help curate `.relai/notes.md`.
 - **Project index = a git repo of `relai.yaml` files + static index**, queried by the CLI; an
   optional local MCP server, no hosting.
-- **Shared conventions = a versioned git repo** that `relai.yaml` points to; no signed policy packs.
+- **Shared conventions = a versioned git repo** that `relai.yaml` points to with `conventions: <hub>@<tag>`; `relai sync` vendors it (dry run unless `--apply`), `relai check` detects drift. Hub content is untrusted. No signed policy packs.
 - **E2 before the handoff spec** — the eval decides the format.
 - **Diagrams are views generated from models** (Mermaid/D2/C4 text only); a generic system-model
   toolkit would be a sibling project, later.
@@ -61,7 +62,7 @@ publication (`relai-a7e`).
   `relai.yaml`. A default-on call would have broken the "no network calls" promise of `SECURITY.md`
   and run at every session start through the hook.
 - **`relai find` vs `relai check`** — the cross-repo capability search (anti-duplication) is
-  `relai find <capability>`; `relai check` stays reserved for contract/drift validation
+  `relai find <capability>`; `relai check` is the contract/drift validation (built 2026-11-16)
   (`relai-a7o.5`, `docs/multi-repo.md` §5). Don't conflate the two when implementing.
 - **Hosted/Docker index service** — documented as a deferred, optional, off-by-default layer
   (`docs/DESIGN.md` §6); not built. Pick it up only once a team actually asks for it.
@@ -81,8 +82,9 @@ publication (`relai-a7e`).
 3. Measurements: done except E2 with a second agent (`relai-a7o.10`: no other agent CLI is
    installed on the owner's machine) and the `--prompt` test of `discover-linked-repos`.
 4. Publication: launch post (`relai-a7e`), named adopters (`relai-lyn`).
-5. Phase 2, only on real demand: hub and `relai sync`, `relai check`, CI templates (`relai-d6i.*`),
-   `relai consumers` (`relai-d6i.4`), then the Backstage export (`relai-klb`).
+5. Phase 2: hub, `relai sync`, `relai check`, `relai hub init` and CI templates are built
+   (change `shared-conventions-hub`, `relai-d6i.1-3`; to try on a real repository). Still on real
+   demand: `relai consumers` (`relai-d6i.4`), then the Backstage export (`relai-klb`).
 
 ## 5. How to resume
 
