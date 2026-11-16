@@ -111,6 +111,8 @@ relai init        # adds AGENTS.md (or links it to CLAUDE.md), relai.yaml, .rela
                   # Claude Code a CLAUDE.md that imports AGENTS.md plus a session-start hook
 relai discover    # lists what the project already gives agents: skills, hooks, specs, tracker, docs
 relai handoff     # prints where the work stands, in ≤ 2,000 tokens
+relai guide       # prints a short how-to for any AI agent; `relai guide --install` writes it as a user-level
+                  # Agent Skill (~/.claude/skills/relai, ~/.agents/skills/relai); `--force` overwrites a differing file
 ```
 
 Flags can go before or after the arguments (`relai init --no-claude dir` and `relai init dir --no-claude` are the same).

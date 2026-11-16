@@ -75,6 +75,9 @@ Usage:
                          scaffold <dir> from <template> (a local path or clone URL), substituting
                          {{.RepoName}} etc. in its text files, then filling in anything the
                          template didn't already provide (AGENTS.md, relai.yaml, .relai/notes.md)
+  relai guide [--install [--force]]
+                         print a short how-to for AI agents; --install writes it as an Agent Skill in
+                         ~/.claude/skills/relai and ~/.agents/skills/relai (--force overwrites a differing file)
   relai version
 
 Run "relai <command> -h" for options.
@@ -383,6 +386,8 @@ func main() {
 		os.Exit(cmdCheck(os.Args[2:], os.Stdout, os.Stderr))
 	case "hub":
 		os.Exit(cmdHub(os.Args[2:], os.Stdout, os.Stderr))
+	case "guide":
+		os.Exit(runGuide(os.Args[2:], os.UserHomeDir, os.Stdout, os.Stderr))
 	case "version", "--version", "-v":
 		fmt.Println("relai", version)
 	case "help", "-h", "--help":
