@@ -93,8 +93,8 @@ func manifest(dir string, add func(level, file, format string, a ...any)) {
 	for _, w := range warns {
 		add(Error, file, "%s", w)
 	}
-	if m.Tasks != "" && m.Tasks != "github" && m.Tasks != "beads" {
-		add(Warning, file, "tasks: %q is not a task backend this relai knows (beads, github)", m.Tasks)
+	if m.Tasks != "" && m.Tasks != "github" && m.Tasks != "gitlab" && m.Tasks != "beads" {
+		add(Warning, file, "tasks: %q is not a task backend this relai knows (beads, github, gitlab)", m.Tasks)
 	}
 	names := func(key string, caps []index.Capability) {
 		seen := map[string]bool{}

@@ -35,7 +35,8 @@ type sources struct {
 	ready, doing []task
 	blocked      []task
 	hasGitHub    bool      // no Beads, and the open GitHub issues were read with gh
-	ghIssues     []ghIssue // in gh's order (newest first)
+	issueBackend string    // "github" or "gitlab": which adapter the repository asked for
+	ghIssues     []ghIssue // in the tool's order (newest first)
 	ghProblem    string    // why a GitHub repository's issues were not read ("" otherwise)
 	ghHint       string    // how to turn the GitHub adapter on, for a GitHub repository that has not
 	hasSpecs     bool
@@ -76,8 +77,8 @@ func collect(dir string) sources {
 		}
 	}
 	if !exists(filepath.Join(dir, ".beads")) {
-		issues, problem, hint, used := githubIssues(dir)
-		s.ghIssues, s.ghProblem, s.ghHint, s.hasGitHub = issues, problem, hint, used && problem == ""
+		l := remoteIssues(dir)
+		s.issueBackend, s.ghIssues, s.ghProblem, s.ghHint, s.hasGitHub = l.backend, l.issues, l.problem, l.hint, l.used && l.problem == ""
 	}
 	if exists(filepath.Join(dir, "openspec")) {
 		var out struct {

@@ -104,7 +104,7 @@ Early development (v0.x): everything may change.
 
 ## Read more
 
-- [`docs/usage.md`](docs/usage.md): the full guide (hub, links, validate, tidy, find, new, other agents, GitHub Issues)
+- [`docs/usage.md`](docs/usage.md): the full guide (hub, links, validate, tidy, find, new, other agents, GitHub and GitLab Issues)
 - [`docs/DESIGN.md`](docs/DESIGN.md), [`docs/multi-repo.md`](docs/multi-repo.md), [`docs/HANDOFF.md`](docs/HANDOFF.md)
 - [`spec/handoff.md`](spec/handoff.md), [`spec/relai-yaml.md`](spec/relai-yaml.md): the formats
 - [SECURITY.md](SECURITY.md), [CONTRIBUTING.md](CONTRIBUTING.md)
