@@ -16,6 +16,7 @@ import (
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scaffold"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scan"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/tidy"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/validate"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/workspace"
 )
 
@@ -47,6 +48,9 @@ Usage:
   relai workspace [--index <path>] [--max-tokens N]
                          one short overview of every project in the index: last activity, open tasks,
                          what each provides (reads files only, never runs bd; default 800 tokens)
+  relai validate [--strict] [--json] [dir]
+                         check relai.yaml (spec/relai-yaml.md), the size of AGENTS.md and the presence of
+                         .relai/notes.md; exits 1 on an error (with --strict, on a warning too): made for CI
   relai tidy [--apply] [dir]
                          after work is merged: close the tasks a commit says it closes ("Closes <id>"), refresh
                          .beads/issues.jsonl, delete fully merged local branches. Dry run unless --apply; never commits
@@ -226,6 +230,24 @@ func main() {
 			if len(e.RelaiYAML.Links) > 0 {
 				fmt.Printf("    works with: %s\n", strings.Join(e.RelaiYAML.Links, ", "))
 			}
+		}
+	case "validate":
+		fs := flag.NewFlagSet("validate", flag.ExitOnError)
+		strict := fs.Bool("strict", false, "fail on warnings too")
+		asJSON := fs.Bool("json", false, "print the findings as JSON")
+		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
+		findings := validate.Run(dirArg(fs))
+		if *asJSON {
+			if findings == nil {
+				findings = []validate.Finding{}
+			}
+			b, _ := json.MarshalIndent(findings, "", "  ")
+			fmt.Println(string(b))
+		} else {
+			fmt.Print(validate.Text(findings))
+		}
+		if validate.Failed(findings, *strict) {
+			os.Exit(1)
 		}
 	case "tidy":
 		fs := flag.NewFlagSet("tidy", flag.ExitOnError)

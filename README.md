@@ -118,6 +118,37 @@ that machine, the hook prints the plain files (`.relai/notes.md`, `relai.yaml`) 
 Existing `CLAUDE.md` / `settings.json` files are left alone (the command tells you what to add by hand);
 `relai init --no-claude` skips all of this. Claude Code asks you to trust a folder before running its hooks.
 
+**Other agents.** The hook is plain POSIX shell with nothing specific to Claude Code in it. Any agent that can
+run a command when a session starts and read what it prints can use the same three lines:
+
+```sh
+#!/bin/sh
+# session start: print the project's state; never fail
+relai handoff 2>/dev/null || cat .relai/notes.md relai.yaml 2>/dev/null
+exit 0
+```
+
+Register it wherever your agent takes a session-start command. An agent with no such hook still gets there
+through `AGENTS.md`, whose first instruction is to run `relai handoff`.
+
+### Check the contract: `relai validate`
+
+```sh
+relai validate            # exit 1 on an error
+relai validate --strict   # exit 1 on a warning too: use this one in CI
+relai validate --json     # the findings as JSON
+```
+
+It checks `relai.yaml` against its one-page specification, [`spec/relai-yaml.md`](spec/relai-yaml.md)
+(required `id` and `summary`, names, values that were not understood, unknown keys such as a mistyped
+`provide:`), that `AGENTS.md` stays within 100 lines, and that `.relai/notes.md` exists. In a CI job:
+`relai validate --strict`.
+
+`relai.yaml` is meant to be read by other tools too. The specification fits on one page, has a version field
+and a compatibility rule, a JSON Schema ([`spec/relai.schema.json`](spec/relai.schema.json)), conformance
+cases ([`spec/conformance/`](spec/conformance/)) and a second reader in Python
+([`spec/readers/relai_yaml.py`](spec/readers/relai_yaml.py)) written from the page alone.
+
 `relai handoff` reads Beads tasks and OpenSpec changes when they are present, and works without them.
 **Beads keeps its database outside git**, so a fresh clone has no tasks until you run `bd bootstrap --yes` (it
 loads `.beads/issues.jsonl`). Until then the handoff says so and shows that file's snapshot, instead of

@@ -13,6 +13,8 @@ can pass the baton between sessions and across repos. The rules below are the sa
   where the handoff was wrong, too long, or missed something. Real repos find what fixtures do not.
 - **Pick up a task**: see "Picking a task" below.
 - **Implement the handoff format in another tool**: the format is specified in [`spec/handoff.md`](spec/handoff.md).
+- **Write a reader of `relai.yaml` in another language**: [`spec/relai-yaml.md`](spec/relai-yaml.md) is one
+  page, and [`spec/conformance/`](spec/conformance/) tells you when your reader is right.
 
 ## Set up
 
