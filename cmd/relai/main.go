@@ -8,11 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ECG-Rudy-Glt/RELAI/internal/discover"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/handoff"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/initrepo"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/notes"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scaffold"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/scan"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/tidy"
@@ -31,7 +33,7 @@ Usage:
   relai init [dir]       add AGENTS.md, relai.yaml, .relai/notes.md, and for Claude Code a CLAUDE.md and a
                          session-start hook that loads the handoff (never overwrites; --no-claude skips the last two;
                          --hooks adds a git pre-commit hook that keeps .beads/issues.jsonl current)
-  relai handoff [dir]    print the current state of the work (≤ 2,000 tokens by default)
+  relai handoff [dir]    print the current state of the work (≤ 2,000 tokens by default; --json for tools)
   relai discover [dir]   list what the project already gives agents (skills, hooks, specs, docs…);
                          --prompt prints instructions for your agent to draft .relai/notes.md
   relai index build [-o <path>] [--scan <folder>]... [--depth N] [<list-file>]
@@ -45,9 +47,15 @@ Usage:
                          for your agent to verify each mention with you (nothing is ever written)
   relai find [--index <path>] <capability>
                          search the index for repos that already provide <capability>
-  relai workspace [--index <path>] [--max-tokens N]
+  relai workspace [--index <path>] [--max-tokens N] [--json]
                          one short overview of every project in the index: last activity, open tasks,
                          what each provides (reads files only, never runs bd; default 800 tokens)
+  relai note add [--pitfall | --next] [--dir <dir>] <text>
+                         add a dated line to .relai/notes.md under Decisions (default), Pitfalls or Next session
+  relai note check [--days N] [--section <name>] [dir]
+                         size of the notes against the handoff budget, and the dated entries older than N days (90)
+  relai note archive [--days N] [--section <name>] [--apply] [dir]
+                         move those entries to .relai/notes-archive.md. Dry run unless --apply; never commits
   relai validate [--strict] [--json] [dir]
                          check relai.yaml (spec/relai-yaml.md), the size of AGENTS.md and the presence of
                          .relai/notes.md; exits 1 on an error (with --strict, on a warning too): made for CI
@@ -98,8 +106,17 @@ func main() {
 		fs := flag.NewFlagSet("handoff", flag.ExitOnError)
 		fs.IntVar(&o.MaxTokens, "max-tokens", o.MaxTokens, "token budget for the whole handoff")
 		out := fs.String("o", "", "write to this file instead of stdout (e.g. .relai/handoff.md)")
+		asJSON := fs.Bool("json", false, "print the same facts as JSON, without the budget cuts")
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
-		doc, err := handoff.Build(dirArg(fs), o)
+		var doc string
+		var err error
+		if *asJSON {
+			var b []byte
+			b, err = handoff.BuildJSON(dirArg(fs))
+			doc = string(b)
+		} else {
+			doc, err = handoff.Build(dirArg(fs), o)
+		}
 		exitOn(err)
 		if *out == "" {
 			fmt.Print(doc)
@@ -231,6 +248,46 @@ func main() {
 				fmt.Printf("    works with: %s\n", strings.Join(e.RelaiYAML.Links, ", "))
 			}
 		}
+	case "note":
+		sub := ""
+		if len(os.Args) > 2 {
+			sub = os.Args[2]
+		}
+		fs := flag.NewFlagSet("note "+sub, flag.ExitOnError)
+		now := time.Now()
+		switch sub {
+		case "add":
+			pitfall := fs.Bool("pitfall", false, "add under Pitfalls instead of Decisions")
+			next := fs.Bool("next", false, "add under Next session instead of Decisions")
+			dir := fs.String("dir", ".", "the repository")
+			_ = fs.Parse(reorderArgs(fs, os.Args[3:]))
+			kind := notes.Decision
+			if *pitfall {
+				kind = notes.Pitfall
+			} else if *next {
+				kind = notes.Next
+			}
+			line, err := notes.Add(*dir, kind, strings.Join(fs.Args(), " "), now)
+			exitOn(err)
+			fmt.Printf("added under %s in %s:\n%s\n", kind, notes.File, line)
+		case "check", "archive":
+			days := fs.Int("days", 90, "entries older than this many days")
+			section := fs.String("section", "", "only the sections whose heading contains this text")
+			apply := fs.Bool("apply", false, "with archive: do it (default: only show what would move)")
+			_ = fs.Parse(reorderArgs(fs, os.Args[3:]))
+			if sub == "archive" && *apply {
+				n, err := notes.Archive(dirArg(fs), *days, *section, now)
+				exitOn(err)
+				fmt.Printf("moved %d entries to %s: review and commit both files.\n", n, notes.ArchiveFile)
+				return
+			}
+			r, err := notes.Check(dirArg(fs), *days, *section, now)
+			exitOn(err)
+			fmt.Print(r.Text(*days, handoff.DefaultOptions().MaxTokens))
+		default:
+			fmt.Fprint(os.Stderr, "usage: relai note add [--pitfall | --next] <text> | relai note check | relai note archive [--apply]\n")
+			os.Exit(2)
+		}
 	case "validate":
 		fs := flag.NewFlagSet("validate", flag.ExitOnError)
 		strict := fs.Bool("strict", false, "fail on warnings too")
@@ -286,6 +343,7 @@ func main() {
 		fs := flag.NewFlagSet("workspace", flag.ExitOnError)
 		idx := fs.String("index", defaultIndexPath, "path to the index built by `relai index build`")
 		max := fs.Int("max-tokens", workspace.DefaultOptions().MaxTokens, "token budget for the overview")
+		asJSON := fs.Bool("json", false, "print the projects as JSON, without the budget cuts")
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		b, err := os.ReadFile(*idx)
 		if err != nil {
@@ -294,6 +352,12 @@ func main() {
 		}
 		var entries []index.Entry
 		exitOn(json.Unmarshal(b, &entries))
+		if *asJSON {
+			out, err := workspace.JSON(workspace.Load(entries))
+			exitOn(err)
+			fmt.Print(string(out))
+			return
+		}
 		fmt.Print(workspace.Render(workspace.Load(entries), workspace.Options{MaxTokens: *max}))
 	case "new":
 		fs := flag.NewFlagSet("new", flag.ExitOnError)

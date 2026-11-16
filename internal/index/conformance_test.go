@@ -39,6 +39,7 @@ func model(m Manifest) map[string]any {
 	str("id", m.ID)
 	str("summary", m.Summary)
 	str("conventions", m.Conventions)
+	str("tasks", m.Tasks)
 	list("owners", m.Owners)
 	list("provides", names(m.Provides))
 	list("consumes", names(m.Consumes))

@@ -77,6 +77,39 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 					p("- `%s` P%d %s", t.ID, t.Priority, short(t.Title, 100))
 				}
 			}
+		} else if !s.hasBeads && s.hasGitHub {
+			var assigned, free []ghIssue
+			for _, i := range s.ghIssues {
+				if len(i.Assignees) > 0 {
+					assigned = append(assigned, i)
+				} else {
+					free = append(free, i)
+				}
+			}
+			p("From GitHub Issues (open issues, read with `gh`):")
+			if len(assigned) > 0 {
+				p("Assigned:")
+				for _, i := range head(assigned, tasks) {
+					p("- `#%d` %s — @%s", i.Number, short(i.Title, 90), strings.Join(i.assignees(), ", @"))
+				}
+			}
+			total := fmt.Sprint(len(free))
+			if len(s.ghIssues) >= ghLimit {
+				total += "+"
+			}
+			p("Open, unassigned (%s total):", total)
+			for _, i := range head(free, tasks) {
+				if l := i.labels(); len(l) > 0 {
+					p("- `#%d` %s [%s]", i.Number, short(i.Title, 90), short(strings.Join(l, ", "), 40))
+				} else {
+					p("- `#%d` %s", i.Number, short(i.Title, 100))
+				}
+			}
+			p("Details: `gh issue view <number>`.")
+		} else if !s.hasBeads && s.ghProblem != "" {
+			p("(no task graph in this repo; GitHub Issues were not read: %s)", s.ghProblem)
+		} else if !s.hasBeads && s.ghHint != "" {
+			p("(no task graph in this repo; %s)", s.ghHint)
 		} else if !s.hasBeads {
 			p("(no task graph in this repo)")
 		} else {

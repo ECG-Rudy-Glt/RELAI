@@ -32,6 +32,7 @@ links: [billing-api]
 | `consumes` | no | list of capabilities | What it needs from others. |
 | `links` | no | list of `id`s | The repositories it works with, declared by a person. |
 | `conventions` | no | text | Reserved: the shared conventions the repository follows. Readers keep it as text. |
+| `tasks` | no | `beads` or `github` | Where the tasks live, when the files do not show it. `github` lets `relai handoff` list the open GitHub issues with the `gh` command, the only network call it can make. |
 
 A **capability** is a dotted lowercase name going from general to specific, such as `auth.oidc` or
 `pdf.generate.invoice`: lowercase letters, digits, `.`, `_`, `-`; starts with a letter or digit.
@@ -72,6 +73,7 @@ Anything else (anchors, multi-line strings, nested mappings beyond the above) is
 | Path | Written by | In git | Content |
 |---|---|---|---|
 | `.relai/notes.md` | people and agents | yes | Decisions, pitfalls, what to do next. Read by `relai handoff`. |
+| `.relai/notes-archive.md` | `relai note archive` | yes | Entries moved out of `notes.md`. Not read by the handoff. |
 | `.relai/index.json` | `relai index build` | your choice | The collected `relai.yaml` of a group of repositories. Read by `relai find` and `relai workspace`. |
 | `.relai/handoff.md` | `relai handoff -o` | no (generated) | A saved copy of the handoff, for tools that read a file. |
 

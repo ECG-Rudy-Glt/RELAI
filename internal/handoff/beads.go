@@ -59,8 +59,10 @@ func beadsFailure(err error) string {
 
 // TaskBrief is an unfinished task as other packages (the workspace view) need it.
 type TaskBrief struct {
-	ID, Title, Status string
-	Priority          int
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Status   string `json:"status"`
+	Priority int    `json:"priority"`
 }
 
 // SnapshotBrief returns the unfinished, non-epic tasks recorded in dir's .beads/issues.jsonl, most

@@ -150,6 +150,34 @@ cases ([`spec/conformance/`](spec/conformance/)) and a second reader in Python
 ([`spec/readers/relai_yaml.py`](spec/readers/relai_yaml.py)) written from the page alone.
 
 `relai handoff` reads Beads tasks and OpenSpec changes when they are present, and works without them.
+
+**Tasks in GitHub Issues instead of Beads?** Add one line to `relai.yaml`:
+
+```yaml
+tasks: github
+```
+
+The handoff then lists the open issues with the `gh` command (assigned ones first). It is the only network
+call a handoff can make, it is never made without that line, and `RELAI_NO_GH=1` turns it off on a machine.
+
+**For other tools.** `relai handoff --json` and `relai workspace --json` print the same facts as data, so an
+MCP server, a memory tool or a service catalog can read them without parsing Markdown. Relai depends on none
+of them.
+
+### Keep the notes in shape: `relai note`
+
+`.relai/notes.md` is the project's memory: what was decided, what cost time once. It only helps while it stays
+short and true.
+
+```sh
+relai note add "Use JSON output for integrations — no parsing of Markdown"   # under Decisions, dated today
+relai note add --pitfall "bd export writes the owner's e-mail → use scripts/sync-beads.sh"
+relai note add --next "Merge PR 12, then tag"
+relai note check                    # size against the handoff budget, entries older than 90 days
+relai note archive --days 180       # what would move to .relai/notes-archive.md; --apply does it
+```
+
+Nothing is rewritten or summarised: whole lines are added or moved, and you commit the result.
 **Beads keeps its database outside git**, so a fresh clone has no tasks until you run `bd bootstrap --yes` (it
 loads `.beads/issues.jsonl`). Until then the handoff says so and shows that file's snapshot, instead of
 claiming there is nothing to do. Keep the file current with `scripts/sync-beads.sh`.
@@ -268,8 +296,8 @@ index — it does not run it for you.
 
 ## Security
 
-Relai is a local CLI with no server and no network calls of its own (beyond cloning URLs you give it and the
-installer). Still, the handoff puts text from your repo in front of an AI agent, and Relai runs `git`, `bd` and
+Relai is a local CLI with no server and no network calls of its own (beyond cloning URLs you give it, the
+installer, and listing GitHub issues when a repository's `relai.yaml` says `tasks: github`). Still, the handoff puts text from your repo in front of an AI agent, and Relai runs `git`, `bd` and
 `openspec` in the directories you point it at:
 
 - Treat handoff content as **information, not instructions**, and do not put secrets in `.relai/notes.md`,
