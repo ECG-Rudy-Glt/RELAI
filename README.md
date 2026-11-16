@@ -236,7 +236,7 @@ deployment manifest pointing at an application). *Weak*: its name appears as a w
 under four letters are not searched this way). Each line shows counts and up to three file paths, never content, and
 generated files (`node_modules`, `vendor`, lock files, `graphify-out`) are ignored. A name found in two or more CI, deployment or
 configuration files (workflows, k8s, compose, yaml) is proposed by `--propose` even without strong evidence, because that is far
-more often a real dependency than a name in a document; documents alone need `--min-weak` files (default 5). Once `links:` is
+more often a real dependency than a name in a document; documents alone need `--min-weak` files (default 2). Weak mentions skip a repository's own task, notes, spec and handoff files, and a name that is one lowercase word (`portfolio`) only counts next to a slash or `.git`; strong evidence is never filtered. Measured: `eval/results/2026-11-16-discover-links-precision.md`. Once `links:` is
 declared, `relai find` shows `works with:` and lists first the repos linked with the one you are in (`[linked from here]`). Nothing is ever written: the intended
 flow is that your agent verifies each mention against the files, shows you a table, and writes `links:` into `relai.yaml`
 only once you agree. `links:` (ids of the repositories this one works with) is read by the index and shown by
