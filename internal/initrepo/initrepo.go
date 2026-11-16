@@ -29,6 +29,9 @@ type Options struct {
 	GitHook bool
 }
 
+// symlink is os.Symlink, replaced in tests to stand for a system that refuses links.
+var symlink = os.Symlink
+
 // Init writes AGENTS.md (or links it to an existing CLAUDE.md), relai.yaml and .relai/notes.md.
 func Init(dir string, linkClaude bool) (Result, error) {
 	return InitWith(dir, Options{LinkClaude: linkClaude})
@@ -61,8 +64,14 @@ func InitWith(dir string, o Options) (Result, error) {
 	case exists(agents):
 		r.Skipped = append(r.Skipped, "AGENTS.md (already present)")
 	case exists(claude) && linkClaude:
-		if err := os.Symlink("CLAUDE.md", agents); err != nil {
-			return r, fmt.Errorf("link AGENTS.md to CLAUDE.md: %w", err)
+		// A symbolic link needs a privilege on Windows (Developer Mode or an administrator), and some
+		// file systems have none: write a real AGENTS.md instead of failing the whole init.
+		if err := symlink("CLAUDE.md", agents); err != nil {
+			if werr := write(agents, agentsTemplate(name, true)); werr != nil {
+				return r, werr
+			}
+			r.Created = append(r.Created, "AGENTS.md (a file: this system refused a link to CLAUDE.md)")
+			break
 		}
 		r.Created = append(r.Created, "AGENTS.md -> CLAUDE.md")
 	default:
