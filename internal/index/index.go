@@ -59,9 +59,20 @@ type Skip struct {
 
 // Find returns every entry whose relai.yaml lists capability under provides:.
 func Find(entries []Entry, capability string) []Entry {
+	return match(entries, capability, func(m Manifest) []Capability { return m.Provides })
+}
+
+// FindConsumers returns every entry whose relai.yaml lists capability under consumes:, with the same
+// matching rule as Find.
+func FindConsumers(entries []Entry, capability string) []Entry {
+	return match(entries, capability, func(m Manifest) []Capability { return m.Consumes })
+}
+
+// match keeps the entries for which side(manifest) holds capability (exact name, case-insensitive).
+func match(entries []Entry, capability string, side func(Manifest) []Capability) []Entry {
 	var out []Entry
 	for _, e := range entries {
-		for _, p := range e.RelaiYAML.Provides {
+		for _, p := range side(e.RelaiYAML) {
 			if strings.EqualFold(p.Capability, capability) {
 				out = append(out, e)
 				break

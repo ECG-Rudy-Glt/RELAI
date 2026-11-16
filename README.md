@@ -263,6 +263,11 @@ has no `relai.yaml` is skipped and reported on stderr; the rest of the index is 
 index has been built yet, it says so and names the `relai index build` command instead of failing
 with a file-not-found error.
 
+Before changing or removing a capability, ask the opposite question: `relai find --consumers auth.oidc`
+lists the indexed repos that declare it under `consumes:` (same matching, same output). It only knows
+what repositories declare, so "nothing consumes it" means nothing *declares* it. Add `--json` to either
+form for `{"capability": ..., "mode": "providers"|"consumers", "matches": [...]}`.
+
 This only builds and reads a flat `index.json` you keep in git or share however you like; see
 [`docs/multi-repo.md`](docs/multi-repo.md) for the larger (not yet built) multi-repo design this is a
 first slice of.

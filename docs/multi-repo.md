@@ -127,7 +127,7 @@ dialects.
 
 - `repos.txt` lists the team's repos. A scheduled job in the hub (`relai index build`) clones or
   fetches each one read-only, copies its `relai.yaml` into `index/`, and writes `index/index.json`.
-- `relai find "<need>"` searches it before building something new; `relai consumers <capability>`
+- `relai find "<need>"` searches it before building something new; `relai find --consumers <capability>`
   shows who depends on what.
 - Pull-based: one read token in the hub instead of a write token in every repo, and repos on
   different forges are indexed the same way.
