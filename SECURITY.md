@@ -51,7 +51,9 @@ The project is v0.x. Only the latest release and `main` get fixes.
   only when asked: a repository whose `relai.yaml` says `tasks: github` has its open issues listed by
   `relai handoff` through the `gh` command (8 seconds at most; `RELAI_NO_GH=1` turns it off on a machine).
   Since that line can arrive with a repository you clone, read `relai.yaml` as you would read a hook. Relai
-  does not phone home.
+  does not phone home. The same goes for `conventions: <hub>@<tag>`: `relai sync` and `relai check` clone that
+  hub (into the user cache directory, with the `ext::` transport off) and treat what they read from it as
+  untrusted: no path outside the repository, no symbolic link followed, no file over 1 MiB.
 - **`relai handoff` itself writes nothing to the repo it reads** (a guarantee of the format, see
   `spec/handoff.md` §6). The tools it runs are another matter: `bd` rewrites its own git-ignored database
   files under `.beads/` every time it runs, even to read.

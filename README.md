@@ -19,8 +19,25 @@ Relai is an open, agent-agnostic layer of files in git plus one CLI. No server, 
 
 Also shipped: **linked repositories** (`links:` in `relai.yaml`, found with `relai discover --links`; a
 person confirms them) and an optional self-hosted team board, [RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM).
-Planned, not built yet (see [`docs/multi-repo.md`](docs/multi-repo.md)): **shared conventions** that
-every repo points to, and **upstream changes** shown in the handoff.
+Planned, not built yet (see [`docs/multi-repo.md`](docs/multi-repo.md)): **upstream changes** shown in
+the handoff.
+
+### Shared conventions from a hub
+
+A hub is a git repository with a `CONVENTIONS.md`, optional `skills/<name>/` and `ci/` templates.
+`relai hub init <dir>` makes one; tag a version (`v1.0.0`). A repository pins it with one line in
+`relai.yaml`, `conventions: <hub>@<tag>`, then:
+
+```sh
+relai sync            # dry run: what would change
+relai sync --apply    # vendors .relai/conventions.md, a 3-line block in AGENTS.md, hub-* skills, a CI job once
+relai check           # relai validate + handoff budget + no drift from the hub at the pinned tag; exit 1 on a problem
+relai check --outdated   # warns when the hub has a higher version tag
+```
+
+`sync` never commits and never writes outside the repository; hub content is treated as untrusted.
+A local line starting with `Override:` in `AGENTS.md` records a departure from a hub rule; `check`
+lists it and still passes. Shared hooks, pull-request automation and per-repo skill selection are not built.
 
 It composes existing standards (AGENTS.md, Agent Skills, OpenSpec, Beads) instead of replacing them.
 

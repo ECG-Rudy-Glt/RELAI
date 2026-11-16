@@ -33,6 +33,7 @@
 - 2026-11-16 — The handoff uses the network only when the repository asks (`tasks: github` in relai.yaml, read with gh) — a default-on call would break the 'no network calls' promise of SECURITY.md and run at every session start.
 - 2026-11-16 — An agent must be able to use relai with no explanation: built as `relai guide` (prints a short how-to for agents) plus `relai guide --install` writing an Agent Skill in the user's home (~/.claude/skills/relai, ~/.agents/skills/relai) — built; without the skill it works only in repositories where relai init wrote AGENTS.md and the session hook.
 - 2026-11-16 — Weak mentions of discover --links are evidence only: measured about 6-7 true out of 10, mostly wrong when a repository is named like an ordinary word — never write links: from them without a person checking.
+- 2026-11-16 — `relai sync` installs a CI job only where the repository already has `.github/`, `.forgejo/` or `.gitea/` (the design did not say what to do with none: a file in a CI folder the repo does not use would be noise); the cache directory can be moved with `RELAI_CACHE_DIR` (tests, CI).
 
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->

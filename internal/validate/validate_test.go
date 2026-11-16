@@ -95,3 +95,17 @@ func TestAgentsBudget(t *testing.T) {
 		t.Errorf("101 lines is over the budget: %v", f)
 	}
 }
+
+func TestInfoNeverFails(t *testing.T) {
+	f := []Finding{{Level: Info, File: "AGENTS.md", Message: "declared override"}}
+	if Failed(f, false) || Failed(f, true) {
+		t.Error("an info must never fail, even with --strict")
+	}
+	f = append(f, Finding{Level: Warning, File: "x", Message: "w"})
+	if Failed(f, false) || !Failed(f, true) {
+		t.Error("a warning fails only with --strict")
+	}
+	if got := Text(f); !strings.Contains(got, "0 error(s), 1 warning(s), 1 info.") {
+		t.Errorf("Text: %q", got)
+	}
+}
