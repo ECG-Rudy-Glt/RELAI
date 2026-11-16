@@ -2,6 +2,7 @@ package initrepo
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -323,5 +324,33 @@ func TestPostMergeHookRunsTidyAndNeverFailsAPull(t *testing.T) {
 	c.Env = []string{"PATH=" + os.Getenv("PATH")}
 	if err := c.Run(); err != nil {
 		t.Errorf("no relai installed: %v", err)
+	}
+}
+
+// On Windows without Developer Mode, and on file systems with no links, os.Symlink fails: init
+// must still leave a usable AGENTS.md instead of stopping half-way.
+func TestInitWritesAFileWhenTheSystemRefusesALink(t *testing.T) {
+	old := symlink
+	symlink = func(string, string) error { return errors.New("a required privilege is not held by the client") }
+	defer func() { symlink = old }()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("# Project\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Init(dir, true)
+	if err != nil {
+		t.Fatalf("init must not fail when a link is refused: %v", err)
+	}
+	fi, err := os.Lstat(filepath.Join(dir, "AGENTS.md"))
+	if err != nil || fi.Mode()&os.ModeSymlink != 0 || fi.Size() == 0 {
+		t.Fatalf("AGENTS.md must be a real, non-empty file: %v %v", fi, err)
+	}
+	if !strings.Contains(strings.Join(r.Created, "\n"), "refused a link") {
+		t.Errorf("the report must say a file was written instead of a link: %v", r.Created)
+	}
+	for _, f := range []string{"relai.yaml", ".relai/notes.md"} {
+		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
+			t.Errorf("%s was not written after the link was refused", f)
+		}
 	}
 }
