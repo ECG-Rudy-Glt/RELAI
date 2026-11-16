@@ -1,4 +1,4 @@
-# Handoff — Relai, written 2026-11-04
+# Handoff — Relai, written 2026-11-04, updated 2026-11-16
 
 > For whoever picks the project up next, human or agent. Read this once; afterwards the live
 > state comes from `relai handoff` (generated) and `.relai/notes.md` (decisions, pitfalls).
@@ -15,7 +15,7 @@ Guiding constraint, decided with the project owner: **easy first**. It must be u
 person or a small team with nothing but git — one binary, no server. **Not a portal** (DESIGN v0.2):
 no central service, no Backstage, no federation or SSO.
 
-## 2. Where things stand (2026-11-04)
+## 2. Where things stand (2026-11-16)
 
 | Area | State |
 |---|---|
@@ -26,13 +26,14 @@ no central service, no Backstage, no federation or SSO.
 | Experiment E2 | `eval/README.md`. The gain is mostly in turns (1 instead of 4-30); in tokens it is 1.2x-3.4x in dollars, more in raw tokens, and nothing on repos with no tracker or notes. Do not quote the 56x figure (it is a size estimate, not an agent measurement) |
 | Test report | A hostile test of both projects on 2026-11-03 (`/home/rudy/relai-test-report/`, not in git). Its findings are tasks labelled `test-report-2026-11-03` in Beads; `bd list --label test-report-2026-11-03` |
 | RELAI-TEAM | The optional team layer, separate repo: [github.com/ECG-Rudy-Glt/RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM). Relai never depends on it. The handoff suggests it only when two signals of parallel work are present |
-| OpenSpec | All changes so far are archived; specs live in `openspec/specs/` |
+| OpenSpec | Three changes are open, each waiting only for a measurement (`workspace-overview`, `discover-linked-repos`, `auto-tidy-and-discovery-followups`); the others are archived, specs live in `openspec/specs/` |
 | Licence | Apache-2.0 |
 
-Not done yet: `relai validate`; phases 2-4 of `docs/multi-repo.md` (hub, `relai sync`, `relai check`
--- those commands do not exist yet, the document is a proposal); a test with a non-Claude agent;
-the launch post (`docs/posts/`) is a draft and must be corrected against the test report before
-any publication (`relai-czl`).
+Not done yet: the `relai.yaml` spec and `relai validate`; the GitHub Issues adapter; `--json`
+output; `relai note`; a test with a non-Claude agent; phases 2-4 of `docs/multi-repo.md` (hub,
+`relai sync`, `relai check` -- those commands do not exist yet, the document is a proposal); the
+launch post (`docs/posts/`) is a draft, to be checked against the measured numbers before any
+publication (`relai-a7e`).
 
 ## 3. Decisions already taken (do not reopen without a reason)
 
@@ -51,6 +52,11 @@ any publication (`relai-czl`).
 - **E2 before the handoff spec** — the eval decides the format.
 - **Diagrams are views generated from models** (Mermaid/D2/C4 text only); a generic system-model
   toolkit would be a sibling project, later.
+- **Backstage / platform engineering: later, as an export** (2026-11-16, `relai-klb`, deferred) —
+  `relai.yaml` and the index exported to `catalog-info.yaml` for a platform team's catalog. One
+  way, never a dependency: Relai stays git-only.
+- **No coupling with memory services** (mem0 and similar) — they are not deterministic and need a
+  server or a key. Relai offers `--json` output for them to read, nothing more.
 - **`relai find` vs `relai check`** — the cross-repo capability search (anti-duplication) is
   `relai find <capability>`; `relai check` stays reserved for contract/drift validation
   (`relai-a7o.5`, `docs/multi-repo.md` §5). Don't conflate the two when implementing.
@@ -62,12 +68,17 @@ any publication (`relai-czl`).
   compaction/clear) is the right shape *if* this is ever picked back up, mirroring
   `relai-a7o.6`. Shelved because there is no external user yet asking for it.
 
-## 4. Next steps, in order
+## 4. Next steps, in order (approved by the owner 2026-11-16)
 
-1. Land the test-report fixes (tasks `test-report-2026-11-03`, P1 first), then tag a release.
-2. Correct the launch post and the announcement against the measured numbers (`relai-czl`).
-3. Then the backlog: `bd ready`. Phase 2 (`relai-d6i.*`: hub, sync, check; the workspace view exists as `relai workspace`, its richer blocks need the links between projects),
-   `relai validate` (`relai-a7o.5`), the GitHub Issues adapter (`relai-a7o.3`).
+1. Phase 1: `relai.yaml` spec with a version field (`relai-a7o.1`, `relai-93e`), `relai validate`
+   (`relai-a7o.5`), a second reader of `relai.yaml` (`relai-ii3`), the generic session-start
+   snippet (`relai-a7o.6`), the sub-folder bug (`relai-sax`).
+2. Openness: GitHub Issues adapter (`relai-a7o.3`), `--json` (`relai-jru`), `relai note` (`relai-7y7`).
+3. Measurements: E2 with a second agent (`relai-a7o.10`), the three open OpenSpec changes, the
+   real-world checks of `relai-31i`.
+4. Publication: launch post (`relai-a7e`), named adopters (`relai-lyn`).
+5. Phase 2, only on real demand: hub and `relai sync`, `relai check`, CI templates (`relai-d6i.*`),
+   `relai consumers` (`relai-d6i.4`), then the Backstage export (`relai-klb`).
 
 ## 5. How to resume
 

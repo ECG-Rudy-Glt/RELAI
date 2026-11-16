@@ -5,4 +5,4 @@
 - [x] `links:` in relai.yaml, indexed and shown by `relai workspace`
 - [x] Tests; README
 - [ ] Measure on real clusters (precision of strong/weak) and with an agent following `--prompt`
-- [ ] Team server side (RELAI-TEAM-9os)
+- [x] Team server side: tracked in the RELAI-TEAM repository (RELAI-TEAM-9os), out of scope here

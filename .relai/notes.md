@@ -27,6 +27,9 @@
 - 2026-11-04 — Handoffs are computed on demand, not stored. Housekeeping after merges is automatic with `relai init --hooks` (pre-commit: export; post-merge: `relai tidy --apply`): a task closes only on a "Closes <id>" in a commit on the default branch.
 
 - 2026-11-04 — Product goal (owner): drive several LINKED repos from one central place, for teams. Relai discovers (`index build --scan`, `discover --links`) and the agent + engineer confirm; RELAI-TEAM is the central place (task RELAI-TEAM-9os). A mention is evidence, never a declared link. The scan must follow symlinks: the owner's projects are symlinks into `projets/` (a first version found 9 of 16).
+- 2026-11-16 — Backstage / platform-engineering integration is planned for later (owner request, task `relai-klb`, deferred) — as a one-way export (`relai.yaml` + index to `catalog-info.yaml`), never a dependency: "not a portal" still holds, Relai stays git-only and a platform team's catalog may consume it.
+- 2026-11-16 — No coupling with memory services (mem0 and similar): they extract memories with an LLM and need a server or an API key, which breaks deterministic / git-only / verifiable. Relai exposes `--json` output instead (`relai-jru`) and improves `.relai/notes.md` itself (`relai-7y7`).
+- 2026-11-16 — Order to finish, approved by the owner: housekeeping, phase 1 (relai.yaml spec, `validate`), openness (GitHub Issues adapter, `--json`, `relai note`), measurements (second agent, the three open changes), publication, then phase 2 (hub, `sync`, `check`).
 
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->
@@ -53,10 +56,8 @@
 - Slices keep their backing array: `append(prefix, x)` on a prefix of a shared slice overwrites the original's next element. Copy first.
 
 ### Next session
-- 2026-11-03 — Open PRs: RELAI #3 (AGENTS.md no-CLI fallback; needs an approval, branch protection), #4 (handoff Team-signals hint, closes relai-xj0), #5 (positioning docs, closes relai-idg and relai-att), this housekeeping PR; RELAI-TEAM #2 (relai-mcp). Merge them, then tag the next release (v0.1.0 is already published).
-- RELAI-TEAM foundation is merged and `relai-mcp` is in review. State there: `relai handoff`. `deployment-presets` is deferred on purpose (needs real requirements first).
-- `team-server-mode` (docs-only change) is done but not archived: archive after the owner reviews the DESIGN §11/§12 and multi-repo §9 wording.
-- Launch post drafted in `docs/posts/`; review and publish is a Beads task.
-- `adoption-and-cross-repo-index` and `golden-path-template` are archived; their specs are in `openspec/specs/`.
-- Test sandboxes (gone after a reboot): `/tmp/relai-sim` (10 fictional repos), `/tmp/relai-board-sim` (same, seeded with tasks and changes).
+- 2026-11-16 — Housekeeping done: finished tasks closed, `handoff-team-hint` and `team-server-mode` archived, new tasks `relai-jru` (`--json`), `relai-7y7` (`relai note`), `relai-klb` (Backstage export, deferred). Work continues in the approved order (see Decisions).
+- The "Team server side" item of `discover-linked-repos` lives in RELAI-TEAM (`RELAI-TEAM-9os`), not here.
+- Launch post drafted in `docs/posts/`; review and publish is a Beads task (`relai-a7e`).
+- Test sandboxes (gone after a reboot): `/tmp/relai-sim`, `/tmp/relai-board-sim`.
 - Tooling: system Go is 1.19; use `/opt/go1.23/bin` and let `GOTOOLCHAIN` fetch the toolchain pinned in go.mod (1.26.10). A `relai` binary is built at `~/.local/bin/relai`.
