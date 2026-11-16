@@ -31,6 +31,7 @@
 - 2026-11-16 — No coupling with memory services (mem0 and similar): they extract memories with an LLM and need a server or an API key, which breaks deterministic / git-only / verifiable. Relai exposes `--json` output instead (`relai-jru`) and improves `.relai/notes.md` itself (`relai-7y7`).
 - 2026-11-16 — Order to finish, approved by the owner: housekeeping, phase 1 (relai.yaml spec, `validate`), openness (GitHub Issues adapter, `--json`, `relai note`), measurements (second agent, the three open changes), publication, then phase 2 (hub, `sync`, `check`).
 - 2026-11-16 — The handoff uses the network only when the repository asks (`tasks: github` in relai.yaml, read with gh) — a default-on call would break the 'no network calls' promise of SECURITY.md and run at every session start.
+- 2026-11-16 — An agent must be able to use relai with no explanation: planned as `relai guide` (prints a short how-to for agents) plus `relai guide --install` writing an Agent Skill in the user's home (~/.claude/skills/relai, ~/.agents/skills/relai) — not built yet; today it works only in repositories where relai init wrote AGENTS.md and the session hook.
 
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->
@@ -63,3 +64,5 @@
 - Launch post drafted in `docs/posts/`; review and publish is a Beads task (`relai-a7e`).
 - Test sandboxes (gone after a reboot): `/tmp/relai-sim`, `/tmp/relai-board-sim`.
 - Tooling: system Go is 1.19; use `/opt/go1.23/bin` and let `GOTOOLCHAIN` fetch the toolchain pinned in go.mod (1.26.10). A `relai` binary is built at `~/.local/bin/relai`.
+- 2026-11-16 — Phase 2 (hub init, sync, check) is decided but NOT built: the decisions are in openspec/changes/shared-conventions-hub/design.md. Start there; give the work to one agent in one worktree (worktrees start from main).
+- 2026-11-16 — Small follow-ups not started: RELAI-TEAM's own relai.yaml reader (internal/aggregate) against spec/conformance and apiVersion; relai guide (below); relai-p30; relai-6x3. E2 with a second agent stays blocked: no other agent CLI is installed.
