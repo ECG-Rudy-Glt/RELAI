@@ -45,8 +45,9 @@ Usage:
                          weak: the name as a word). Evidence, not verified links; --propose prints a
                          links: block per relai.yaml to check and paste yourself; --prompt prints instructions
                          for your agent to verify each mention with you (nothing is ever written)
-  relai find [--index <path>] <capability>
-                         search the index for repos that already provide <capability>
+  relai find [--consumers] [--json] [--index <path>] <capability>
+                         search the index for repos that already provide <capability>;
+                         --consumers lists the repos that declare they consume it instead
   relai workspace [--index <path>] [--max-tokens N] [--json]
                          one short overview of every project in the index: last activity, open tasks,
                          what each provides (reads files only, never runs bd; default 800 tokens)
@@ -215,9 +216,11 @@ func main() {
 	case "find":
 		fs := flag.NewFlagSet("find", flag.ExitOnError)
 		idx := fs.String("index", defaultIndexPath, "path to the index built by `relai index build`")
+		consumers := fs.Bool("consumers", false, "list the repos that consume the capability instead of those that provide it")
+		asJSON := fs.Bool("json", false, "print the matches as JSON")
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		if fs.NArg() < 1 {
-			fmt.Fprintln(os.Stderr, "usage: relai find [--index <path>] <capability>")
+			fmt.Fprintln(os.Stderr, "usage: relai find [--consumers] [--json] [--index <path>] <capability>")
 			os.Exit(2)
 		}
 		capability := fs.Arg(0)
@@ -228,26 +231,12 @@ func main() {
 		}
 		var entries []index.Entry
 		exitOn(json.Unmarshal(b, &entries))
-		found := index.Find(entries, capability)
-		if len(found) == 0 {
-			fmt.Printf("nothing in the index provides %q\n", capability)
-			return
-		}
 		// Run inside a repo that declares `links:`: the repos it works with come first and say so.
 		var me index.Manifest
 		if mb, err := os.ReadFile("relai.yaml"); err == nil {
 			me = index.ParseManifest(mb)
 		}
-		for _, e := range index.Order(found, me) {
-			rel := index.Relation(e, me)
-			if rel != "" {
-				rel = " [" + rel + "]"
-			}
-			fmt.Printf("- %s (%s)%s: %s\n", e.RelaiYAML.ID, e.Source, rel, e.RelaiYAML.Summary)
-			if len(e.RelaiYAML.Links) > 0 {
-				fmt.Printf("    works with: %s\n", strings.Join(e.RelaiYAML.Links, ", "))
-			}
-		}
+		exitOn(writeFind(os.Stdout, entries, capability, *consumers, *asJSON, me))
 	case "note":
 		sub := ""
 		if len(os.Args) > 2 {
