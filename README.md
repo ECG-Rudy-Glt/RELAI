@@ -63,7 +63,8 @@ Nothing is overwritten. Adding Relai to a project that already has docs, skills 
 
 ## Commands
 
-Run `relai <command> -h` for options.
+Run `relai <command> -h` for options. `relai tidy`, `relai note archive` and `relai sync` are dry runs unless
+`--apply`, and none of them commits.
 
 | Command | What it does |
 |---|---|
@@ -86,8 +87,6 @@ Run `relai <command> -h` for options.
 | `relai hub init <dir>` | Scaffold a conventions hub |
 | `relai sync [--apply]` | Vendor the conventions of the hub pinned in `relai.yaml` |
 | `relai check [--outdated]` | `validate` + handoff budget + drift from the hub; for CI |
-| **Maintenance** | |
-| `relai tidy`, `relai note archive`, `relai sync` | Dry runs unless `--apply`; none of them commits |
 
 ## Status and limits
 
