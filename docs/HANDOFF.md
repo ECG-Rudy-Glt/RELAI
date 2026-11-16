@@ -26,7 +26,8 @@ no central service, no Backstage, no federation or SSO.
 | Experiment E2 | `eval/README.md`. The gain is mostly in turns (1 instead of 4-30); in tokens it is 1.2x-3.4x in dollars, more in raw tokens, and nothing on repos with no tracker or notes. Do not quote the 56x figure (it is a size estimate, not an agent measurement) |
 | Test report | A hostile test of both projects on 2026-11-03 (`/home/rudy/relai-test-report/`, not in git). Its findings are tasks labelled `test-report-2026-11-03` in Beads; `bd list --label test-report-2026-11-03` |
 | RELAI-TEAM | The optional team layer, separate repo: [github.com/ECG-Rudy-Glt/RELAI-TEAM](https://github.com/ECG-Rudy-Glt/RELAI-TEAM). Relai never depends on it. The handoff suggests it only when two signals of parallel work are present |
-| OpenSpec | Three changes are open, each waiting only for a measurement (`workspace-overview`, `discover-linked-repos`, `auto-tidy-and-discovery-followups`); the others are archived, specs live in `openspec/specs/` |
+| OpenSpec | One change is open, `discover-linked-repos`: its precision is measured, the test with an agent following `--prompt` is not. The others are archived; specs live in `openspec/specs/` |
+| Measured 2026-11-16 | `eval/results/`: on the owner's folders, strong mentions were true 28 times out of 28, weak ones about 6 to 7 times out of 10 (poor when a repository's name is an ordinary word); `--propose` proposed 6 links, all true, but only 22% of the true ones (85% with `--min-weak 2`). `relai workspace` answered 3 questions out of 3 in one turn each; the comparison arm was spoiled by tool permissions, so "replaces the handoffs" is not shown. The five real-world checks pass; nothing was run on macOS or Windows |
 | Licence | Apache-2.0 |
 
 Not done yet: a test with a non-Claude agent; phases 2-4 of `docs/multi-repo.md` (hub,
@@ -77,8 +78,8 @@ publication (`relai-a7e`).
    tasks remain, below.
 2. Openness is done (2026-11-16): GitHub Issues adapter (opt-in, `tasks: github`), `--json` on
    `handoff` and `workspace`, `relai note`.
-3. Measurements: E2 with a second agent (`relai-a7o.10`), the three open OpenSpec changes, the
-   real-world checks of `relai-31i`.
+3. Measurements: done except E2 with a second agent (`relai-a7o.10`: no other agent CLI is
+   installed on the owner's machine) and the `--prompt` test of `discover-linked-repos`.
 4. Publication: launch post (`relai-a7e`), named adopters (`relai-lyn`).
 5. Phase 2, only on real demand: hub and `relai sync`, `relai check`, CI templates (`relai-d6i.*`),
    `relai consumers` (`relai-d6i.4`), then the Backstage export (`relai-klb`).

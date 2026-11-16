@@ -31,6 +31,7 @@
 - 2026-11-16 — No coupling with memory services (mem0 and similar): they extract memories with an LLM and need a server or an API key, which breaks deterministic / git-only / verifiable. Relai exposes `--json` output instead (`relai-jru`) and improves `.relai/notes.md` itself (`relai-7y7`).
 - 2026-11-16 — Order to finish, approved by the owner: housekeeping, phase 1 (relai.yaml spec, `validate`), openness (GitHub Issues adapter, `--json`, `relai note`), measurements (second agent, the three open changes), publication, then phase 2 (hub, `sync`, `check`).
 - 2026-11-16 — The handoff uses the network only when the repository asks (`tasks: github` in relai.yaml, read with gh) — a default-on call would break the 'no network calls' promise of SECURITY.md and run at every session start.
+- 2026-11-16 — Weak mentions of discover --links are evidence only: measured about 6-7 true out of 10, mostly wrong when a repository is named like an ordinary word — never write links: from them without a person checking.
 
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->
@@ -56,6 +57,7 @@
 - `fix/*` branches of 2026-11-04 overlap (README, `cmd/relai/main.go`, `initrepo_test.go`): they were merged together on `integration/all-relai` first; resolve the same way if you merge them one by one.
 - Slices keep their backing array: `append(prefix, x)` on a prefix of a shared slice overwrites the original's next element. Copy first.
 - 2026-11-16 — `relai handoff` in this repo cuts the end of notes.md (about 3,000 tokens of notes for a 2,000 budget) → `relai note check`, then archive what is done.
+- 2026-11-16 — Subagent worktrees start from main, not from the branch you are on → replay their commit on your branch (cherry-pick) and expect conflicts in cmd/relai/main.go and docs/HANDOFF.md.
 
 ### Next session
 - 2026-11-16 — Housekeeping done: finished tasks closed, `handoff-team-hint` and `team-server-mode` archived, new tasks `relai-jru` (`--json`), `relai-7y7` (`relai note`), `relai-klb` (Backstage export, deferred). Work continues in the approved order (see Decisions).
