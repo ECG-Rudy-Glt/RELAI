@@ -315,8 +315,8 @@ Each phase ends with acceptance criteria and tests. Phase 1 is useful on its own
 - [x] Spec documents in `spec/`: handoff format and budget rules (`handoff.md`), `relai.yaml` on one
   page with a version and a compatibility rule (`relai-yaml.md`), its JSON Schema, conformance cases,
   a second reader, and the `.relai/` layout.
-- [ ] CLI: `relai init` (done), `relai handoff` with adapters for Beads and OpenSpec (done) and GitHub
-  Issues (open), `relai validate` (done).
+- [ ] CLI: `relai init` (done), `relai handoff` with adapters for Beads, OpenSpec and GitHub
+  Issues (done; `--json` for other tools), `relai validate` (done), `relai note` (done).
 - [x] Session-start integrations: Claude Code hook, generic shell snippet for other agents (README).
 - [x] Release binaries.
 - Acceptance: E2 target met on at least 3 fixtures and 2 different agents.

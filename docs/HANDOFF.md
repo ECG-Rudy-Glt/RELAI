@@ -20,8 +20,8 @@ no central service, no Backstage, no federation or SSO.
 | Area | State |
 |---|---|
 | Release | Releases are automatic: every merge to `main` with a `feat:`/`fix:`/`perf:` commit is tagged and published by `.github/workflows/release.yml` (6 platform archives + `checksums.txt`; see the releases page for the latest); `scripts/install.sh` verifies the SHA-256 before installing and never runs `sudo` on its own. |
-| CLI | Go, stdlib only, `cmd/relai`: `init` (AGENTS.md, relai.yaml, `.relai/notes.md`, and for Claude Code a `CLAUDE.md` plus a SessionStart hook; never overwrites; `--no-claude`), `handoff`, `discover`, `index build` / `find`, `index build --scan <folder>` (repeatable) and `discover --links <folder>` (find the repos of a folder and the mentions between them: evidence, never verdicts), `validate` (checks `relai.yaml` against `spec/relai-yaml.md`, the 100 lines of `AGENTS.md`, the presence of `.relai/notes.md`; `--strict` for CI), `tidy` (close the tasks merged commits say they close, refresh the export, delete merged branches; run by the post-merge hook), `workspace` (one budgeted overview of all indexed projects, files only), `new <template> <dir>`, `version`. Flags may come before or after the arguments. `init --hooks` adds a git pre-commit hook that keeps `.beads/issues.jsonl` current |
-| Handoff | Format **v0.5** (see `spec/handoff.md`, changelog at the end). Deterministic, about 2,000 tokens at most, degraded mode for repos with no harness, honest messages when `bd` or `openspec` cannot be read |
+| CLI | Go, stdlib only, `cmd/relai`: `init` (AGENTS.md, relai.yaml, `.relai/notes.md`, and for Claude Code a `CLAUDE.md` plus a SessionStart hook; never overwrites; `--no-claude`), `handoff`, `discover`, `index build` / `find`, `index build --scan <folder>` (repeatable) and `discover --links <folder>` (find the repos of a folder and the mentions between them: evidence, never verdicts), `note add` / `note check` / `note archive` (keep `.relai/notes.md` short: dated entries, old ones listed or moved to `.relai/notes-archive.md`), `validate` (checks `relai.yaml` against `spec/relai-yaml.md`, the 100 lines of `AGENTS.md`, the presence of `.relai/notes.md`; `--strict` for CI), `tidy` (close the tasks merged commits say they close, refresh the export, delete merged branches; run by the post-merge hook), `workspace` (one budgeted overview of all indexed projects, files only), `new <template> <dir>`, `version`. Flags may come before or after the arguments. `init --hooks` adds a git pre-commit hook that keeps `.beads/issues.jsonl` current |
+| Handoff | Format **v0.6** (GitHub Issues with `tasks: github` in `relai.yaml`, `--json`) (see `spec/handoff.md`, changelog at the end). Deterministic, about 2,000 tokens at most, degraded mode for repos with no harness, honest messages when `bd` or `openspec` cannot be read |
 | Tests | `go test ./...`: handoff (budget, degraded mode, hygiene, large inputs), initrepo, discover, index (every `provides` list shape), scaffold (symlinks, binary files, token substitution), CLI args. CI runs gofmt, vet, test |
 | Experiment E2 | `eval/README.md`. The gain is mostly in turns (1 instead of 4-30); in tokens it is 1.2x-3.4x in dollars, more in raw tokens, and nothing on repos with no tracker or notes. Do not quote the 56x figure (it is a size estimate, not an agent measurement) |
 | Test report | A hostile test of both projects on 2026-11-03 (`/home/rudy/relai-test-report/`, not in git). Its findings are tasks labelled `test-report-2026-11-03` in Beads; `bd list --label test-report-2026-11-03` |
@@ -29,8 +29,7 @@ no central service, no Backstage, no federation or SSO.
 | OpenSpec | Three changes are open, each waiting only for a measurement (`workspace-overview`, `discover-linked-repos`, `auto-tidy-and-discovery-followups`); the others are archived, specs live in `openspec/specs/` |
 | Licence | Apache-2.0 |
 
-Not done yet: the GitHub Issues adapter; `--json`
-output; `relai note`; a test with a non-Claude agent; phases 2-4 of `docs/multi-repo.md` (hub,
+Not done yet: a test with a non-Claude agent; phases 2-4 of `docs/multi-repo.md` (hub,
 `relai sync`, `relai check` -- those commands do not exist yet, the document is a proposal); the
 launch post (`docs/posts/`) is a draft, to be checked against the measured numbers before any
 publication (`relai-a7e`).
@@ -57,6 +56,9 @@ publication (`relai-a7e`).
   way, never a dependency: Relai stays git-only.
 - **No coupling with memory services** (mem0 and similar) — they are not deterministic and need a
   server or a key. Relai offers `--json` output for them to read, nothing more.
+- **The handoff uses the network only when the repository asks** (2026-11-16) — `tasks: github` in
+  `relai.yaml`. A default-on call would have broken the "no network calls" promise of `SECURITY.md`
+  and run at every session start through the hook.
 - **`relai find` vs `relai check`** — the cross-repo capability search (anti-duplication) is
   `relai find <capability>`; `relai check` stays reserved for contract/drift validation
   (`relai-a7o.5`, `docs/multi-repo.md` §5). Don't conflate the two when implementing.
@@ -73,7 +75,8 @@ publication (`relai-a7e`).
 1. Phase 1 is done (2026-11-16): `spec/relai-yaml.md`, its schema, conformance cases and Python
    reader, `relai validate`, the generic session-start snippet. Only its measurement and adapter
    tasks remain, below.
-2. Openness: GitHub Issues adapter (`relai-a7o.3`), `--json` (`relai-jru`), `relai note` (`relai-7y7`).
+2. Openness is done (2026-11-16): GitHub Issues adapter (opt-in, `tasks: github`), `--json` on
+   `handoff` and `workspace`, `relai note`.
 3. Measurements: E2 with a second agent (`relai-a7o.10`), the three open OpenSpec changes, the
    real-world checks of `relai-31i`.
 4. Publication: launch post (`relai-a7e`), named adopters (`relai-lyn`).

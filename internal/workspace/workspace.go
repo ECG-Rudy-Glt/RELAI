@@ -9,6 +9,7 @@
 package workspace
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -26,14 +27,32 @@ const FormatVersion = "0.1"
 
 // Project is what is known about one indexed repository.
 type Project struct {
-	ID, Summary, Source string
-	LastCommit          string // YYYY-MM-DD, "" when unknown
-	Provides            []string
-	Links               []string
-	Open, Doing         int
-	Top                 []handoff.TaskBrief // most urgent unfinished tasks
-	Remote              bool                // a clone URL: not read here
-	NoTaskList          bool                // no .beads/issues.jsonl: "no list" is not "no tasks"
+	ID         string              `json:"id"`
+	Summary    string              `json:"summary"`
+	Source     string              `json:"source"`
+	LastCommit string              `json:"last_commit,omitempty"` // YYYY-MM-DD, "" when unknown
+	Provides   []string            `json:"provides,omitempty"`
+	Links      []string            `json:"links,omitempty"`
+	Open       int                 `json:"open_tasks"`
+	Doing      int                 `json:"tasks_in_progress"`
+	Top        []handoff.TaskBrief `json:"top_tasks,omitempty"`    // most urgent unfinished tasks
+	Remote     bool                `json:"remote,omitempty"`       // a clone URL: not read here
+	NoTaskList bool                `json:"no_task_list,omitempty"` // no .beads/issues.jsonl: "no list" is not "no tasks"
+}
+
+// JSON returns the projects as indented JSON: the same facts as Render, without the budget cuts.
+func JSON(projects []Project) ([]byte, error) {
+	if projects == nil {
+		projects = []Project{}
+	}
+	b, err := json.MarshalIndent(struct {
+		Format   string    `json:"format"`
+		Projects []Project `json:"projects"`
+	}{FormatVersion, projects}, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return append(b, '\n'), nil
 }
 
 // Options controls the overview.

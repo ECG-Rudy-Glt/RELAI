@@ -111,7 +111,7 @@ def parse(text):
         if line and line[0] not in " \t#-" and ":" in line:
             key, _, value = line.partition(":")
             key, value = key.strip(), strip_comment(value)
-            if key in ("apiVersion", "id", "summary", "conventions"):
+            if key in ("apiVersion", "id", "summary", "conventions", "tasks"):
                 manifest[key] = unquote(value)
             elif key == "owners" or key in LISTS:
                 if value.startswith("[") and value.endswith("]"):

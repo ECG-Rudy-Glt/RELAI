@@ -3,6 +3,7 @@ id: team/invoice-pdf            # unique in the index
 summary: "Generates invoice PDFs: from JSON # not a comment"
 owners: [alice, 'team-billing']
 conventions: team/conventions@2.3
+tasks: github
 provides:
   - capability: pdf.generate.invoice
   # a comment between entries

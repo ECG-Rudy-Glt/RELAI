@@ -37,6 +37,9 @@ type Manifest struct {
 	Links []string `json:"links,omitempty"`
 	// Conventions is the shared conventions the repository says it follows (reserved, kept as text).
 	Conventions string `json:"conventions,omitempty"`
+	// Tasks names where the repository's tasks live when that cannot be seen from its files:
+	// "github" lets `relai handoff` read the open GitHub issues with gh. Empty: Beads if present.
+	Tasks string `json:"tasks,omitempty"`
 }
 
 // Entry is one indexed repo: where it came from and its parsed manifest.
@@ -256,6 +259,8 @@ func parseManifest(b []byte) (Manifest, []string) {
 			m.Summary = unquote(rest)
 		case "conventions":
 			m.Conventions = unquote(rest)
+		case "tasks":
+			m.Tasks = unquote(rest)
 		case "owners":
 			if rest != "" {
 				m.Owners = inlineList(rest)
@@ -297,7 +302,7 @@ func parseManifest(b []byte) (Manifest, []string) {
 }
 
 // KnownKeys are the top-level keys of relai.yaml format v0 (spec/relai-yaml.md §2).
-var KnownKeys = []string{"apiVersion", "id", "summary", "owners", "provides", "consumes", "links", "conventions"}
+var KnownKeys = []string{"apiVersion", "id", "summary", "owners", "provides", "consumes", "links", "conventions", "tasks"}
 
 // TopLevelKeys returns the top-level keys of a relai.yaml in file order, known or not.
 func TopLevelKeys(b []byte) []string {

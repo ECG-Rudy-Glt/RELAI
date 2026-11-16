@@ -47,8 +47,11 @@ The project is v0.x. Only the latest release and `main` get fixes.
   does **not** protect against a compromised release or account. If that matters to you, build from source
   at a tag (`go install github.com/ECG-Rudy-Glt/RELAI/cmd/relai@v0.1.0`) or review the code first. Piping
   `curl` into `sh` is convenient, and you can download `scripts/install.sh` and read it first.
-- **No network calls otherwise.** Besides cloning URLs you supply and the installer, Relai makes none, and
-  it does not phone home.
+- **No network calls otherwise.** Besides cloning URLs you supply and the installer, Relai makes one, and
+  only when asked: a repository whose `relai.yaml` says `tasks: github` has its open issues listed by
+  `relai handoff` through the `gh` command (8 seconds at most; `RELAI_NO_GH=1` turns it off on a machine).
+  Since that line can arrive with a repository you clone, read `relai.yaml` as you would read a hook. Relai
+  does not phone home.
 - **`relai handoff` itself writes nothing to the repo it reads** (a guarantee of the format, see
   `spec/handoff.md` §6). The tools it runs are another matter: `bd` rewrites its own git-ignored database
   files under `.beads/` every time it runs, even to read.

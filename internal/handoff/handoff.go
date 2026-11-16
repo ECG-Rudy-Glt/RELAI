@@ -13,7 +13,7 @@ import (
 )
 
 // FormatVersion is the version of spec/handoff.md this package implements.
-const FormatVersion = "0.5"
+const FormatVersion = "0.6"
 
 // Options controls what goes into the handoff.
 type Options struct {
@@ -28,8 +28,10 @@ func DefaultOptions() Options { return Options{MaxTokens: 2000, MaxCommits: 8, M
 // EstimateTokens is a rough, model-agnostic estimate (~4 characters per token).
 func EstimateTokens(s string) int { return (utf8.RuneCountInString(s) + 3) / 4 }
 
-// Build returns the handoff Markdown for the repository at dir.
-func Build(dir string, o Options) (string, error) {
+// repoRoot returns the root of the git repository that contains dir. Run from a subdirectory, the
+// handoff is still the repository's: AGENTS.md, .beads and .relai live at the root, and looking for
+// them in the subdirectory called every such repo "degraded".
+func repoRoot(dir string) (string, error) {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		return "", err
@@ -38,14 +40,22 @@ func Build(dir string, o Options) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s is not a git repository", dir)
 	}
-	// Run from a subdirectory, the handoff is still the repository's: AGENTS.md, .beads and
-	// .relai live at the root, and looking for them in the subdirectory called every such repo
-	// "degraded".
 	if root := strings.TrimSpace(top); root != "" {
-		dir = root
+		return root, nil
+	}
+	return dir, nil
+}
+
+func repoName(root string) string { return filepath.Base(root) }
+
+// Build returns the handoff Markdown for the repository at dir.
+func Build(dir string, o Options) (string, error) {
+	dir, err := repoRoot(dir)
+	if err != nil {
+		return "", err
 	}
 	s := collect(dir)
-	name := filepath.Base(dir)
+	name := repoName(dir)
 	// Cut order from spec/handoff.md §5: advice, task lists, commits, harness lines, degraded-mode
 	// lists (longer first), then notes. Each stage finds, by bisection, how many items still fit,
 	// instead of dropping one item and re-rendering the whole document each time (which was

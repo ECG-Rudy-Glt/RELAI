@@ -34,6 +34,10 @@ type sources struct {
 	snapshot     []snapTask // open tasks from .beads/issues.jsonl, used when the live ones cannot be read
 	ready, doing []task
 	blocked      []task
+	hasGitHub    bool      // no Beads, and the open GitHub issues were read with gh
+	ghIssues     []ghIssue // in gh's order (newest first)
+	ghProblem    string    // why a GitHub repository's issues were not read ("" otherwise)
+	ghHint       string    // how to turn the GitHub adapter on, for a GitHub repository that has not
 	hasSpecs     bool
 	changes      []change
 	specsProblem string // why openspec/ exists but its changes were listed from the files instead ("" when the tool worked)
@@ -70,6 +74,10 @@ func collect(dir string) sources {
 		if s.beadsProblem != "" {
 			s.snapshot = readSnapshot(dir)
 		}
+	}
+	if !exists(filepath.Join(dir, ".beads")) {
+		issues, problem, hint, used := githubIssues(dir)
+		s.ghIssues, s.ghProblem, s.ghHint, s.hasGitHub = issues, problem, hint, used && problem == ""
 	}
 	if exists(filepath.Join(dir, "openspec")) {
 		var out struct {

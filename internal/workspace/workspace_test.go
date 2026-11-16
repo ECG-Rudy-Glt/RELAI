@@ -151,3 +151,18 @@ func TestWorkspaceShowsWhoAProjectWorksWith(t *testing.T) {
 		t.Errorf("links not shown:\n%s", doc)
 	}
 }
+
+func TestJSONListsEveryProject(t *testing.T) {
+	b, err := JSON([]Project{{ID: "a", Summary: "A.", Source: "/x/a", Open: 2, Provides: []string{"a.b"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"format": "` + FormatVersion + `"`, `"id": "a"`, `"open_tasks": 2`, `"provides": [`} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("missing %s in:\n%s", want, b)
+		}
+	}
+	if b, _ := JSON(nil); !strings.Contains(string(b), `"projects": []`) {
+		t.Errorf("no project must be an empty list, not null:\n%s", b)
+	}
+}
