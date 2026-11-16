@@ -76,7 +76,7 @@ func TestFindListsRepositoriesAndWhatTheyHave(t *testing.T) {
 func TestLinksSeparateStrongFromWeakAndSkipGeneratedFiles(t *testing.T) {
 	root := cluster(t)
 	repos, _ := Find(root)
-	ls := Links(repos)
+	ls := LinksWith(repos, Options{}) // the precision rules are tested on their own below
 	get := func(from, to string) *Link {
 		for i := range ls {
 			if ls[i].From == from && ls[i].To == to {
@@ -217,7 +217,7 @@ func TestWeakMentionsInConfigFilesCountMoreThanInDocuments(t *testing.T) {
 	mkrepo(t, root, "chatty", "", map[string]string{"a.md": "webshop", "b.md": "webshop", "c.md": "webshop"})
 	mkrepo(t, root, "webshop", "", map[string]string{})
 	repos, _ := Find(root)
-	ls := Links(repos)
+	ls := LinksWith(repos, Options{})
 	var dep, chat *Link
 	for i := range ls {
 		if ls[i].To == "webshop" && ls[i].From == "deployer" {
@@ -233,7 +233,7 @@ func TestWeakMentionsInConfigFilesCountMoreThanInDocuments(t *testing.T) {
 	if chat == nil || chat.WeakConfig != 0 || chat.Weak != 3 {
 		t.Fatalf("chatty -> webshop = %+v, want 3 weak files, none in config", chat)
 	}
-	prop := Propose(repos, ls, 0) // default threshold of 5 documents
+	prop := Propose(repos, ls, 5)
 	if !strings.Contains(prop, "# deployer/relai.yaml") || strings.Contains(prop, "# chatty/relai.yaml") {
 		t.Errorf("two config files should be proposed, three documents should not:\n%s", prop)
 	}

@@ -28,6 +28,8 @@ Ready (unblocked, 16 total):
 - 2026-11-02 — Go, stdlib only — single binary, trivial install, easy to audit.
 ```
 
+<img src="docs/diagrams/architecture.svg" alt="Relai architecture: files in one git repository, the relai binary, the handoff and guide an agent reads, then three optional layers: several repositories, shared conventions from a hub, and the separate Relai-Team server" width="460">
+
 ## Install
 
 No Go toolchain needed:
