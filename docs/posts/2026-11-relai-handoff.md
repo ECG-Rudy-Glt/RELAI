@@ -38,12 +38,27 @@ that cost us a wrong answer in testing, see below), the next unchecked step of a
 change, and whatever the team already uses (skills, hooks, CI) by way of `relai discover`. No
 tracker, no specs, not even `AGENTS.md`? It falls back to a **degraded mode**: a git-only report
 (recent commits, recently touched files, `TODO`/`FIXME` markers) instead of nothing — Relai's
-value shouldn't require adopting the rest of the stack first.
+value shouldn't require adopting the rest of the stack first. Tasks in GitHub Issues rather than
+Beads? One line in `relai.yaml` (`tasks: github`) and the handoff lists the open issues through
+`gh`. That is the only network call it can make, and it never makes it unasked.
 
 It also ships `relai find <capability>`: before you build something, check whether one of your
 other projects already provides it, by searching a flat index of their `relai.yaml` files. No
 portal, no account — just `relai index build` over a list of repo paths or clone URLs, then
-`relai find`.
+`relai find`. `relai find --consumers <capability>` asks the opposite question before you change
+something: who depends on it.
+
+`relai.yaml` itself is specified on [one page](../../spec/relai-yaml.md), with a version field, a
+compatibility rule and conformance cases; a second reader, in Python, was written from that page
+alone and passes them. `relai validate --strict` checks a repository against it in CI, and
+`relai handoff --json` gives the same facts as data to whatever else you run (an MCP server, a
+catalog). Relai depends on none of those.
+
+One thing we measured and would rather say than hide: `relai discover --links`, which looks for
+mentions between the repositories of a folder, is evidence and not a verdict. On our own folders
+its strong evidence (a remote URL, a relative path) was right every time (28 of 28); its weak
+evidence (the name as a word) was right about two times out of three, and mostly wrong when a
+repository is named like an ordinary word. So Relai proposes, and a person writes the link.
 
 ## Does it actually work? (not just "is it short")
 
@@ -93,7 +108,7 @@ handoff format with a token budget**, and **cross-repo "check before you build" 
 - Repo: [github.com/ECG-Rudy-Glt/RELAI](https://github.com/ECG-Rudy-Glt/RELAI)
 - Eval harness (reproduce the numbers above, or run it against your own repos):
   [`eval/README.md`](../../eval/README.md)
-- Format spec: [`spec/handoff.md`](../../spec/handoff.md)
+- Format specs: [`spec/handoff.md`](../../spec/handoff.md), [`spec/relai-yaml.md`](../../spec/relai-yaml.md)
 
 It's early (v0.x). We'd rather hear "this breaks on X" now than after we publish the format as a
 spec. The one thing we're confident of: whatever the right design turns out to be, it should stay

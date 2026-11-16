@@ -4,4 +4,4 @@
 - [x] Duplicate `provides:` key keeps both lists and warns
 - [x] `--depth`, `links:` in `relai find`, config evidence and `--min-weak`
 - [x] Tests, README, AGENTS.md convention
-- [ ] Measure the precision of the new propose rule on a second real folder
+- [x] Measure the precision of the new propose rule on a second real folder — see eval/results/2026-11-16-discovery-and-workspace.md
