@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ECG-Rudy-Glt/RELAI/blob/main/spec/relai.schema.json",
+  "title": "relai.yaml, format v0",
+  "description": "The data model of a relai.yaml file once parsed. See spec/relai-yaml.md. Unknown keys are allowed and ignored.",
+  "type": "object",
+  "required": ["id", "summary"],
+  "additionalProperties": true,
+  "properties": {
+    "apiVersion": { "const": "relai.dev/v0" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$" },
+    "summary": { "type": "string", "minLength": 1 },
+    "owners": { "type": ["array", "null"], "items": { "type": "string" } },
+    "provides": { "$ref": "#/$defs/capabilities" },
+    "consumes": { "$ref": "#/$defs/capabilities" },
+    "links": {
+      "type": ["array", "null"],
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$" }
+    },
+    "conventions": { "type": "string" }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "capabilities": {
+      "type": ["array", "null"],
+      "items": {
+        "anyOf": [
+          { "$ref": "#/$defs/name" },
+          {
+            "type": "object",
+            "required": ["capability"],
+            "additionalProperties": true,
+            "properties": { "capability": { "$ref": "#/$defs/name" } }
+          }
+        ]
+      }
+    }
+  }
+}

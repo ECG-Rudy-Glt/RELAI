@@ -35,6 +35,8 @@ type Manifest struct {
 	// Links are the ids of the repositories this one works with, declared by a person after checking
 	// the mentions `relai discover --links` found. Capabilities say what; links say who.
 	Links []string `json:"links,omitempty"`
+	// Conventions is the shared conventions the repository says it follows (reserved, kept as text).
+	Conventions string `json:"conventions,omitempty"`
 }
 
 // Entry is one indexed repo: where it came from and its parsed manifest.
@@ -252,6 +254,8 @@ func parseManifest(b []byte) (Manifest, []string) {
 			m.ID = scalar(rest, "id", &warn)
 		case "summary":
 			m.Summary = unquote(rest)
+		case "conventions":
+			m.Conventions = unquote(rest)
 		case "owners":
 			if rest != "" {
 				m.Owners = inlineList(rest)
@@ -290,6 +294,21 @@ func parseManifest(b []byte) (Manifest, []string) {
 		}
 	}
 	return m, warn
+}
+
+// KnownKeys are the top-level keys of relai.yaml format v0 (spec/relai-yaml.md §2).
+var KnownKeys = []string{"apiVersion", "id", "summary", "owners", "provides", "consumes", "links", "conventions"}
+
+// TopLevelKeys returns the top-level keys of a relai.yaml in file order, known or not.
+func TopLevelKeys(b []byte) []string {
+	var keys []string
+	text := strings.ReplaceAll(strings.TrimPrefix(string(b), "\ufeff"), "\r\n", "\n")
+	for _, l := range strings.Split(text, "\n") {
+		if k, _, ok := splitKV(l); ok {
+			keys = append(keys, k)
+		}
+	}
+	return keys
 }
 
 // scalar returns an unquoted scalar, refusing a value that looks like an unfinished flow

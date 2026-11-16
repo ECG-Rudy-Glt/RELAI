@@ -312,12 +312,13 @@ Each phase ends with acceptance criteria and tests. Phase 1 is useful on its own
   (a) nothing, (b) "read the docs", (c) handoff; measure tokens and correctness. Target: (c) as
   correct as (b) with ≥ 10× fewer tokens net of the agent's fixed per-turn overhead (system prompt
   and tool definitions, ~27k tokens for Claude Code). Results drive the format.
-- [ ] Spec documents in `spec/`: handoff format and budget rules, `relai.yaml` JSON Schema,
-  `.relai/` layout, `notes.md` conventions, `AGENTS.md` ↔ `CLAUDE.md` interplay.
-- [ ] CLI: `relai init`, `relai handoff` (adapters for Beads/OpenSpec/GitHub Issues),
-  `relai validate`.
-- [ ] Session-start integrations: Claude Code hook, generic shell snippet for other agents.
-- [ ] Release binaries.
+- [x] Spec documents in `spec/`: handoff format and budget rules (`handoff.md`), `relai.yaml` on one
+  page with a version and a compatibility rule (`relai-yaml.md`), its JSON Schema, conformance cases,
+  a second reader, and the `.relai/` layout.
+- [ ] CLI: `relai init` (done), `relai handoff` with adapters for Beads and OpenSpec (done) and GitHub
+  Issues (open), `relai validate` (done).
+- [x] Session-start integrations: Claude Code hook, generic shell snippet for other agents (README).
+- [x] Release binaries.
 - Acceptance: E2 target met on at least 3 fixtures and 2 different agents.
 
 ### Phase 2 — project index and shared conventions
