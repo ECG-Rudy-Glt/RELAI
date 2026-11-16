@@ -31,7 +31,7 @@
 - 2026-11-16 — No coupling with memory services (mem0 and similar): they extract memories with an LLM and need a server or an API key, which breaks deterministic / git-only / verifiable. Relai exposes `--json` output instead (`relai-jru`) and improves `.relai/notes.md` itself (`relai-7y7`).
 - 2026-11-16 — Order to finish, approved by the owner: housekeeping, phase 1 (relai.yaml spec, `validate`), openness (GitHub Issues adapter, `--json`, `relai note`), measurements (second agent, the three open changes), publication, then phase 2 (hub, `sync`, `check`).
 - 2026-11-16 — The handoff uses the network only when the repository asks (`tasks: github` in relai.yaml, read with gh) — a default-on call would break the 'no network calls' promise of SECURITY.md and run at every session start.
-- 2026-11-16 — An agent must be able to use relai with no explanation: planned as `relai guide` (prints a short how-to for agents) plus `relai guide --install` writing an Agent Skill in the user's home (~/.claude/skills/relai, ~/.agents/skills/relai) — not built yet; today it works only in repositories where relai init wrote AGENTS.md and the session hook.
+- 2026-11-16 — An agent must be able to use relai with no explanation: built as `relai guide` (prints a short how-to for agents) plus `relai guide --install` writing an Agent Skill in the user's home (~/.claude/skills/relai, ~/.agents/skills/relai) — built; without the skill it works only in repositories where relai init wrote AGENTS.md and the session hook.
 - 2026-11-16 — Weak mentions of discover --links are evidence only: measured about 6-7 true out of 10, mostly wrong when a repository is named like an ordinary word — never write links: from them without a person checking.
 
 ### Pitfalls
