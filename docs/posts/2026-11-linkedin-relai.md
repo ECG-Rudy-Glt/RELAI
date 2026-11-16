@@ -19,7 +19,7 @@ J'ai construit Relai pour cela : des fichiers dans git et un binaire Go. Pas de 
 
 Pour les équipes, Relai-Team (facultatif, auto-hébergé) ajoute un tableau commun où chaque personne ou agent réserve une tâche, pour que deux ne démarrent jamais la même.
 
-Pas de chiffre ronflant : mes premiers essais portaient sur de petits projets que j'ai écrits moi-même, ce n'est pas une preuve. Ce que je sais : le résumé n'apporte rien sur un dépôt sans suivi de tâches ni notes, car Relai résume ce qui existe, il n'invente rien. Je teste maintenant sur des dépôts plus grands et plus complexes.
+Ce qui change : l'agent démarre avec un texte court que vous pouvez relire vous-même, toujours le même pour un même état du dépôt, au lieu de deviner. Quand deux sources se contredisent (une tâche ouverte alors qu'un commit la ferme), le résumé le signale au lieu de choisir. Et sans suivi ni notes, il n'apporte rien : Relai résume ce qui existe, il n'invente rien.
 
 Ce n'est pas un outil de mémoire comme mem0 ou claude-mem, ni une méthode comme Trellis ou OpenSpec. Il calcule un résumé, toujours le même pour un même état du dépôt. La comparaison honnête est sur le site.
 
@@ -47,7 +47,7 @@ So I built Relai: files in git plus one Go binary. No server, no account, no mod
 
 For teams, Relai-Team (optional, self-hosted) adds a shared board where each person or agent claims a task, so two never start the same one.
 
-No big numbers: my first trials used small projects I wrote myself, which proves little. What I do know: the summary adds nothing on a repo with no task tracker or notes, because Relai summarises what exists, it invents nothing. I am now testing on larger, more complex repos.
+What changes: the agent starts from a short text you can read yourself, always the same for the same repository state, instead of guessing. When two sources disagree (a task is open but a commit closes it), the summary flags it instead of picking one. And with no tracker or notes it adds nothing: Relai summarises what exists, it invents nothing.
 
 It is not a memory tool like mem0 or claude-mem, nor a method like Trellis or OpenSpec. It computes a summary, always the same for the same repository state. The honest comparison is on the site.
 
