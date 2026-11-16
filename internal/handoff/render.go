@@ -86,7 +86,7 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 					free = append(free, i)
 				}
 			}
-			p("From GitHub Issues (open issues, read with `gh`):")
+			p("From %s Issues (open issues, read with `%s`):", backendName(s.issueBackend), backendTool(s.issueBackend))
 			if len(assigned) > 0 {
 				p("Assigned:")
 				for _, i := range head(assigned, tasks) {
@@ -105,9 +105,9 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 					p("- `#%d` %s", i.Number, short(i.Title, 100))
 				}
 			}
-			p("Details: `gh issue view <number>`.")
+			p("Details: `%s issue view <number>`.", backendTool(s.issueBackend))
 		} else if !s.hasBeads && s.ghProblem != "" {
-			p("(no task graph in this repo; GitHub Issues were not read: %s)", s.ghProblem)
+			p("(no task graph in this repo; %s Issues were not read: %s)", backendName(s.issueBackend), s.ghProblem)
 		} else if !s.hasBeads && s.ghHint != "" {
 			p("(no task graph in this repo; %s)", s.ghHint)
 		} else if !s.hasBeads {

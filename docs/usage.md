@@ -166,6 +166,12 @@ tasks: github
 The handoff then lists the open issues with the `gh` command (assigned ones first). It is the only network
 call a handoff can make, it is never made without that line, and `RELAI_NO_GH=1` turns it off on a machine.
 
+**On GitLab?** Write `tasks: gitlab` instead. The handoff then lists the open issues with the official
+[`glab`](https://gitlab.com/gitlab-org/cli) command (`glab issue list`), whether the project is on gitlab.com
+or on your own server: relai handles no token and no URL, `glab` takes both from the repository's remote and
+from its own sign-in (`glab auth login`). Same rules: opt-in, one call, 8 seconds at most, switched off by
+`RELAI_NO_GH=1`, and when `glab` is missing or fails the handoff says so.
+
 **For other tools.** `relai handoff --json` and `relai workspace --json` print the same facts as data, so an
 MCP server, a memory tool or a service catalog can read them without parsing Markdown. Relai depends on none
 of them.

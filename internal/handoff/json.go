@@ -37,7 +37,7 @@ type JSONDoc struct {
 		Commits     []string `json:"commits"`
 	} `json:"state"`
 	Tasks struct {
-		// Source is "beads", "beads-snapshot" (read from .beads/issues.jsonl, may lag), "github" or "none".
+		// Source is "beads", "beads-snapshot" (read from .beads/issues.jsonl, may lag), "github", "gitlab" or "none".
 		Source     string     `json:"source"`
 		Problem    string     `json:"problem,omitempty"`
 		InProgress []JSONTask `json:"in_progress"`
@@ -96,7 +96,7 @@ func BuildJSON(dir string) ([]byte, error) {
 			}
 		}
 	case s.hasGitHub:
-		d.Tasks.Source = "github"
+		d.Tasks.Source = s.issueBackend
 		for _, i := range s.ghIssues {
 			j := JSONTask{ID: "#" + strconv.Itoa(i.Number), Title: cleanControl(i.Title), Assignees: i.assignees(), Labels: i.labels()}
 			if len(j.Assignees) > 0 {
