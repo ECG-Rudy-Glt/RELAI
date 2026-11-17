@@ -2,6 +2,7 @@ package handoff
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -54,13 +55,13 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 	if len(s.upstream) > 0 {
 		p("")
 		p("## Upstream changes")
-		p("Repositories this one links to (`links:` in relai.yaml, found next to it) with commits after the last commit here:")
+		p("A repository this one depends on (`links:` in relai.yaml) changed after the last commit here. Check what changed before you build on it:")
 		for i, u := range s.upstream {
 			if i == 3 {
 				p("- … (%d more)", len(s.upstream)-3)
 				break
 			}
-			p("- `%s`: %d commit(s), latest %s — `relai handoff ../%s` before relying on it", u.ID, u.Commits, u.Last, u.ID)
+			RenderMoved(p, u, "../"+filepath.Base(u.Path))
 		}
 	}
 
@@ -270,4 +271,17 @@ func namedInCommits(s sources) []string {
 		}
 	}
 	return out
+}
+
+// RenderMoved writes the lines of one upstream change: what changed (commit subjects, dated notes) and the
+// command to read it, at rel (the path of the repository as the reader sees it).
+func RenderMoved(p func(string, ...any), u Moved, rel string) {
+	p("- `%s` (`%s`): %d commit(s) since, latest %s", u.ID, rel, u.Commits, u.Last)
+	for _, sub := range u.Subjects {
+		p("  - commit: %s", sub)
+	}
+	for _, n := range u.Notes {
+		p("  - note: %s", n)
+	}
+	p("  - read it first: `git -C %s log -3 --stat`", rel)
 }

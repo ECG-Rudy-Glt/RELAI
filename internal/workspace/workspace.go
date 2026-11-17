@@ -59,6 +59,7 @@ func JSON(projects []Project) ([]byte, error) {
 // Options controls the overview.
 type Options struct {
 	MaxTokens int
+	Root      string // workspace handoff: the scanned folder, so upstream paths are shown relative to it
 }
 
 // DefaultOptions keeps the overview small enough to read at the start of every session.

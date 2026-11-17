@@ -49,10 +49,10 @@ func TestHandoffBlocksAndUpstream(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(fakeBin, "bd-was-run")); err == nil {
 		t.Fatal("the workspace handoff ran bd")
 	}
-	doc := RenderHandoff(bs, Options{MaxTokens: 1500})
+	doc := RenderHandoff(bs, Options{MaxTokens: 1500, Root: root})
 	for _, want := range []string{
 		"## app", "1 open, 1 in progress (+1 epic not counted)",
-		"upstream changes: `lib` has 2 commit(s)",
+		"upstream changed after the last commit here", "`lib` (`lib`): 2 commit(s) since", "commit: lib3", "read it first: `git -C lib log -3 --stat`",
 		"change `login` 1/2 — next: write the form", "next session: finish the login",
 		"## lib", "no task list in git",
 	} {

@@ -40,6 +40,10 @@
 
 - 2026-11-17 — `relai export backstage`: one-way, Component + one API per provided capability (type `relai-capability`), `/` in ids becomes `-`. Checked with Backstage's `@backstage/catalog-model` validators only (eval/backstage), not in a running Backstage; do not claim more than that.
 
+- 2026-11-17 — Codex (colleague, n=3) did not confirm the handoff advantage on the hard multi-repo variant (relai 1/3, none 2/3): both Haiku and Codex read the upstream line and did not follow it. Handoff v0.10 puts the new upstream commit subjects in the line. Do not re-test it on the `hard` fixture of `eval/multi`: the answer is now in the line. Use a new fixture, more runs, someone else's tasks.
+
+- 2026-11-17 — Round 2 (`eval/resume2`, tasks by a blind agent, 120 runs, handoff v0.10): one repository, no difference (agents find the notes alone); linked repositories, 0/30 without the handoff against 28/30 with it. Untested: an AGENTS.md naming the dependencies. Quote it with that limit.
+
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->
 - `bd init` makes its own commit and edits AGENTS.md/.gitignore → use `--skip-agents --skip-hooks`, then `git reset --soft HEAD~1` and recommit.

@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/ECG-Rudy-Glt/RELAI/internal/handoff"
@@ -19,11 +18,7 @@ import (
 const HandoffVersion = "0.1"
 
 // Upstream says that a repository this one links to has commits newer than this one's last commit.
-type Upstream struct {
-	ID      string `json:"id"`
-	Commits int    `json:"commits"`
-	Last    string `json:"last_commit"`
-}
+type Upstream = handoff.Moved
 
 // Block is one repository of the workspace handoff.
 type Block struct {
@@ -104,29 +99,9 @@ func readManifest(path string) (index.Manifest, error) {
 	return index.ParseManifest(b), nil
 }
 
-// upstream lists, for each repository this one declares a link to and that is in the same folder, the
-// commits made there after this repository's last commit: what moved while nobody touched this one.
+// upstream lists what moved in the repositories this one links to and that are in the same folder.
 func upstream(r scan.Repo, links []string, byID map[string]scan.Repo) []Upstream {
-	since, err := exec.Command("git", "-C", r.Path, "log", "-1", "--format=%cI").Output()
-	if err != nil || strings.TrimSpace(string(since)) == "" {
-		return nil
-	}
-	var out []Upstream
-	for _, l := range links {
-		u, ok := byID[l]
-		if !ok || scan.Identity(u.Path) == scan.Identity(r.Path) {
-			continue
-		}
-		o, err := exec.Command("git", "-C", u.Path, "rev-list", "--count", "--since="+strings.TrimSpace(string(since)), "HEAD").Output()
-		if err != nil {
-			continue
-		}
-		n, _ := strconv.Atoi(strings.TrimSpace(string(o)))
-		if n > 0 {
-			out = append(out, Upstream{ID: l, Commits: n, Last: u.LastCommit})
-		}
-	}
-	return out
+	return handoff.UpstreamMoved(r.Path, links, func(id string) string { return byID[id].Path })
 }
 
 // HandoffJSON returns the blocks as JSON, without the budget cuts.
@@ -163,7 +138,7 @@ func RenderHandoff(bs []Block, o Options) string {
 	}
 	var doc string
 	for _, l := range levels {
-		doc = renderHandoff(bs, l.tasks, l.extras, l.full)
+		doc = renderHandoff(bs, l.tasks, l.extras, l.full, o.Root)
 		if handoff.EstimateTokens(doc) <= o.MaxTokens {
 			return doc
 		}
@@ -171,7 +146,7 @@ func RenderHandoff(bs []Block, o Options) string {
 	return doc
 }
 
-func renderHandoff(bs []Block, tasks, extras, full int) string {
+func renderHandoff(bs []Block, tasks, extras, full int, root string) string {
 	var b strings.Builder
 	p := func(f string, a ...any) { b.WriteString(clean(fmt.Sprintf(f, a...)) + "\n") }
 	p("# Workspace handoff — %d repositories", len(bs))
@@ -201,7 +176,14 @@ func renderHandoff(bs []Block, tasks, extras, full int) string {
 		}
 		p("%s", head)
 		for _, u := range r.Upstream {
-			p("- upstream changes: `%s` has %d commit(s) since the last commit here (latest %s)", u.ID, u.Commits, u.Last)
+			p("- upstream changed after the last commit here, check before building on it:")
+			rel := u.Path
+			if root != "" {
+				if x, err := filepath.Rel(root, u.Path); err == nil {
+					rel = x
+				}
+			}
+			handoff.RenderMoved(func(f string, a ...any) { p("  "+f, a...) }, u, rel)
 		}
 		if r.NoTaskList {
 			p("- tasks: no task list in git (unknown, not zero)")
