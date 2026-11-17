@@ -236,6 +236,10 @@ relai discover --links ~/projects --prompt   # instructions for your agent to ch
 relai discover --links ~/projects --propose  # a `links:` block per relai.yaml to check and paste yourself
 ```
 
+Each command that scans a folder (`index build --scan`, `discover --links`, `handoff --workspace`) looks one level down
+by default. When git repositories sit one level below that, it says how many and which `--depth` reaches them, so a scan
+that found one repository out of twenty does not pass for an answer.
+
 The result is **evidence, not a verdict**. *Strong*: a repository holds the other's remote URL or a relative path to it (a
 deployment manifest pointing at an application). *Weak*: its name appears as a word (it can be an ordinary word, and names
 under four letters are not searched this way). Each line shows counts and up to three file paths, never content, and

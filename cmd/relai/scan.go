@@ -46,6 +46,18 @@ func scanSources(dirs []string, depth int, w io.Writer) ([]string, error) {
 			fmt.Fprintf(w, "; without one (skipped, run `relai init` there to include them): %s", strings.Join(without, ", "))
 		}
 		fmt.Fprintln(w)
+		hintDeeper(w, dir, depth)
 	}
 	return sources, nil
+}
+
+// hintDeeper writes one line to w when git repositories sit one folder level below depth in dir, so
+// a scan that silently stopped too high says how to reach them.
+func hintDeeper(w io.Writer, dir string, depth int) {
+	if depth < 1 {
+		depth = 1
+	}
+	if n := scan.Deeper(dir, depth); n > 0 {
+		fmt.Fprintf(w, "relai: %d more git repositories one folder level deeper in %s are not included: add --depth %d\n", n, dir, depth+1)
+	}
 }

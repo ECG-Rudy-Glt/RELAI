@@ -35,6 +35,24 @@ type Repo struct {
 // It is FindDepth(dir, 1).
 func Find(dir string) ([]Repo, error) { return FindDepth(dir, 1) }
 
+// Deeper counts the git repositories one folder level below what FindDepth(dir, depth) reaches: the
+// ones a person would miss without a hint, since a scan that finds one repository out of twenty looks
+// like an answer. It walks one more level and says nothing about the levels below that.
+func Deeper(dir string, depth int) int {
+	if depth < 1 {
+		depth = 1
+	}
+	now, err := FindDepth(dir, depth)
+	if err != nil {
+		return 0
+	}
+	more, err := FindDepth(dir, depth+1)
+	if err != nil || len(more) <= len(now) {
+		return 0
+	}
+	return len(more) - len(now)
+}
+
 // skipDirs are folders that never hold the projects of a person, whatever their depth.
 var skipDirs = map[string]bool{"node_modules": true, "vendor": true, "graphify-out": true, "dist": true, "build": true, "target": true, "__pycache__": true}
 

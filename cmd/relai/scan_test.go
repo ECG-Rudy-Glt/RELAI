@@ -230,3 +230,46 @@ func TestScanSourcesWorktreeInAnotherFolderIsTheSameRepo(t *testing.T) {
 		t.Errorf("the overlap should be said:\n%s", out.String())
 	}
 }
+
+// layeredRepos makes root/a, root/group/b and root/group/c as git repositories with a relai.yaml.
+func layeredRepos(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	mkRepo(t, root, "a")
+	mkRepo(t, filepath.Join(root, "group"), "b")
+	mkRepo(t, filepath.Join(root, "group"), "c")
+	return root
+}
+
+// A scan that stops above most repositories must say so, in each command that scans a folder;
+// once --depth reaches them the hint is gone.
+func TestScanningCommandsSayWhenRepositoriesAreDeeper(t *testing.T) {
+	bin := builtBinary(t)
+	root := layeredRepos(t)
+	hint := "2 more git repositories one folder level deeper in " + root + " are not included: add --depth 2"
+	run := func(args ...string) string {
+		t.Helper()
+		out, err := exec.Command(bin, args...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("relai %v: %v\n%s", args, err, out)
+		}
+		return string(out)
+	}
+	idx := filepath.Join(t.TempDir(), "index.json")
+	for _, c := range []struct {
+		name    string
+		shallow []string
+		deep    []string
+	}{
+		{"handoff --workspace", []string{"handoff", "--workspace", root}, []string{"handoff", "--workspace", "--depth", "2", root}},
+		{"discover --links", []string{"discover", "--links", root}, []string{"discover", "--links", "--depth", "2", root}},
+		{"index build --scan", []string{"index", "build", "-o", idx, "--scan", root}, []string{"index", "build", "-o", idx, "--depth", "2", "--scan", root}},
+	} {
+		if out := run(c.shallow...); !strings.Contains(out, hint) {
+			t.Errorf("%s at depth 1: no hint about the deeper repositories:\n%s", c.name, out)
+		}
+		if out := run(c.deep...); strings.Contains(out, "folder level deeper") {
+			t.Errorf("%s at depth 2: hint printed although every repository is reached:\n%s", c.name, out)
+		}
+	}
+}
