@@ -45,6 +45,7 @@
 - 2026-11-17 — Round 2 (`eval/resume2`, tasks by a blind agent, 120 runs, handoff v0.10): one repository, no difference (agents find the notes alone); linked repositories, 0/30 without the handoff against 28/30 with it. Untested: an AGENTS.md naming the dependencies. Quote it with that limit.
 
 - 2026-11-17 — *Check first* and `tidy` match whole task IDs (a child `a-1.2` no longer names or closes `a-1`) and skip a commit that changed the task's own line in `.beads/issues.jsonl` while leaving it open (it created or updated the task). Found on a real 20-repository workspace: 5 of 5 *Check first* lines were wrong (prefix matches and creation commits), and `Closes a-1.2` would have closed `a-1` with `tidy --apply`. Same selection, no format bump: the lines keep their shape.
+- 2026-11-17 — The generated hooks (SessionStart, pre-commit, post-merge) add `$HOME/.local/bin`, `$HOME/go/bin` and `/usr/local/bin` after the existing PATH: an editor extension or a desktop app starts them without the login shell's PATH, so relai and bd installed in ~/.local/bin were "not installed" (seen with the VS Code extension under WSL). The SessionStart fallback now says "not found" or "failed", never "not installed" for a binary that is there. Repos initialised before keep their old hook (init never overwrites).
 
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->

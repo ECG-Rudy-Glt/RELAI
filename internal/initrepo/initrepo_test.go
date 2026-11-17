@@ -137,19 +137,22 @@ func TestHookScriptNeverFailsAndFallsBackToPlainFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = os.WriteFile(filepath.Join(dir, ".relai", "notes.md"), []byte("### Decisions\n- we chose X\n"), 0o644)
-	// run the hook with a PATH that has no relai at all
+	// run the hook with a PATH and a HOME that have no relai at all
+	if _, err := os.Stat("/usr/local/bin/relai"); err == nil {
+		t.Skip("relai is installed in /usr/local/bin, which the hook adds to PATH: the not-found case cannot be run here")
+	}
 	cmd := exec.Command("/bin/sh", filepath.Join(dir, ".claude", "hooks", "session-start.sh"))
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "CLAUDE_PROJECT_DIR=" + dir}
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "CLAUDE_PROJECT_DIR=" + dir}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("hook failed: %v\n%s", err, out)
 	}
-	if !strings.Contains(string(out), "relai CLI is not installed") || !strings.Contains(string(out), "we chose X") {
+	if !strings.Contains(string(out), "relai CLI was not found") || !strings.Contains(string(out), "we chose X") {
 		t.Errorf("fallback did not print the plain files:\n%s", out)
 	}
 	// and with a project dir that does not exist it still exits 0
 	cmd = exec.Command("/bin/sh", filepath.Join(dir, ".claude", "hooks", "session-start.sh"))
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "CLAUDE_PROJECT_DIR=/no/such/dir"}
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "CLAUDE_PROJECT_DIR=/no/such/dir"}
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Errorf("hook must never fail, got %v\n%s", err, out)
 	}
@@ -352,5 +355,107 @@ func TestInitWritesAFileWhenTheSystemRefusesALink(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
 			t.Errorf("%s was not written after the link was refused", f)
 		}
+	}
+}
+
+// writeTool puts an executable shell script named name in dir.
+func writeTool(t *testing.T, dir, name, body string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\n"+body+"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// An editor extension or a desktop app can start the session hook without the login shell's PATH,
+// so ~/.local/bin (where the user installed relai and bd) is missing: the hook must still find
+// relai there, and relai must find bd there too.
+func TestSessionHookFindsRelaiAndBdInLocalBinWithoutTheLoginPath(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := InitWith(dir, Options{ClaudeCode: true}); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	bin := filepath.Join(home, ".local", "bin")
+	writeTool(t, bin, "bd", "echo bd-ok")
+	writeTool(t, bin, "relai", `[ "$1" = handoff ] && echo "# Handoff from relai, bd says: $(bd)"`)
+	cmd := exec.Command("/bin/sh", filepath.Join(dir, ".claude", "hooks", "session-start.sh"))
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + home, "CLAUDE_PROJECT_DIR=" + dir}
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("hook failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "# Handoff from relai, bd says: bd-ok") {
+		t.Errorf("the hook did not run relai (and relai did not find bd) from ~/.local/bin:\n%s", out)
+	}
+	if strings.Contains(string(out), "not found") || strings.Contains(string(out), "plain files") {
+		t.Errorf("relai was there, the hook must not fall back:\n%s", out)
+	}
+}
+
+// A relai that is found but fails must not be reported as "not installed": that sends the reader
+// to reinstall a binary that is already there.
+func TestSessionHookSaysWhenRelaiFailsRatherThanMissing(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := InitWith(dir, Options{ClaudeCode: true}); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(dir, ".relai", "notes.md"), []byte("### Decisions\n- we chose Y\n"), 0o644)
+	home := t.TempDir()
+	writeTool(t, filepath.Join(home, ".local", "bin"), "relai", "exit 3")
+	cmd := exec.Command("/bin/sh", filepath.Join(dir, ".claude", "hooks", "session-start.sh"))
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + home, "CLAUDE_PROJECT_DIR=" + dir}
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("hook must never fail, got %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "relai handoff failed here") || strings.Contains(string(out), "not found") || !strings.Contains(string(out), "we chose Y") {
+		t.Errorf("want the 'failed' fallback with the plain files:\n%s", out)
+	}
+}
+
+// The git hooks have the same problem from an editor's commit button: with bd only in ~/.local/bin and
+// a PATH without it, the pre-commit hook must still refresh the export, and the post-merge hook must
+// still run relai tidy.
+func TestGitHooksFindToolsInLocalBin(t *testing.T) {
+	dir := t.TempDir()
+	gitInit(t, dir)
+	if _, err := InitWith(dir, Options{GitHook: true}); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.MkdirAll(filepath.Join(dir, ".beads"), 0o755)
+	_ = os.WriteFile(filepath.Join(dir, ".beads", "last-touched"), []byte("x-1"), 0o644)
+	home := t.TempDir()
+	bin := filepath.Join(home, ".local", "bin")
+	calls := filepath.Join(home, "calls")
+	writeTool(t, bin, "bd", `out="$3"; echo '{"id":"x-1","title":"t"}' > "$out"`)
+	writeTool(t, bin, "relai", `echo "$@" >> `+calls)
+	env := []string{"PATH=/usr/bin:/bin", "HOME=" + home,
+		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t"}
+	for _, a := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "first"}} {
+		c := exec.Command("git", a...)
+		c.Dir, c.Env = dir, env
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", a, err, out)
+		}
+	}
+	out, _ := exec.Command("git", "-C", dir, "show", "--stat", "--format=", "HEAD").Output()
+	if !strings.Contains(string(out), ".beads/issues.jsonl") {
+		t.Errorf("pre-commit did not find bd in ~/.local/bin: the export is not in the commit\n%s", out)
+	}
+	hook, _ := exec.Command("git", "-C", dir, "rev-parse", "--git-path", "hooks/post-merge").Output()
+	path := strings.TrimSpace(string(hook))
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(dir, path)
+	}
+	c := exec.Command("/bin/sh", path)
+	c.Dir, c.Env = dir, env
+	if out, err := c.CombinedOutput(); err != nil {
+		t.Fatalf("post-merge must never fail, got %v\n%s", err, out)
+	}
+	if b, _ := os.ReadFile(calls); !strings.Contains(string(b), "tidy --apply --quiet") {
+		t.Errorf("post-merge did not find relai in ~/.local/bin, calls: %q", b)
 	}
 }
