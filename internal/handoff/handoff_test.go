@@ -170,7 +170,7 @@ func TestBuildBasics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.8)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
+	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.9)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("missing %q in:\n%s", want, doc)
 		}
@@ -441,5 +441,33 @@ func TestUpstreamSectionOnlyWhenALinkedNeighbourMoved(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(app, "relai.yaml"), []byte("id: app\n"), 0o644)
 	if doc, _ = Build(app, DefaultOptions()); strings.Contains(doc, "Upstream") {
 		t.Errorf("no links, no section:\n%s", doc)
+	}
+}
+
+func TestCheckFirstAlsoFromTheSnapshot(t *testing.T) {
+	dir := t.TempDir()
+	run := func(args ...string) {
+		c := exec.Command("git", args...)
+		c.Dir = dir
+		c.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	_ = os.MkdirAll(filepath.Join(dir, ".beads"), 0o755)
+	_ = os.WriteFile(filepath.Join(dir, ".beads", "issues.jsonl"), []byte(`{"id":"ex-1","title":"Add CSV export","status":"open","priority":1,"issue_type":"task"}`+"\n"+`{"id":"ex-2","title":"Add JSON export","status":"open","priority":2,"issue_type":"task"}`+"\n"), 0o644)
+	run("init", "-q", "-b", "main")
+	run("add", "-A")
+	run("commit", "-q", "-m", "feat: CSV export (ex-1)")
+	// a bd that cannot read the tasks, so the snapshot is used
+	fake := t.TempDir()
+	_ = os.WriteFile(filepath.Join(fake, "bd"), []byte("#!/bin/sh\nexit 1\n"), 0o755)
+	t.Setenv("PATH", fake+string(os.PathListSeparator)+os.Getenv("PATH"))
+	doc, err := Build(dir, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(doc, "Check first — still open in the snapshot") || !strings.Contains(doc, "`ex-1` Add CSV export, in ") || strings.Contains(doc, "`ex-2` Add JSON export, in ") {
+		t.Errorf("snapshot check-first missing or wrong:\n%s", doc)
 	}
 }

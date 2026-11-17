@@ -266,6 +266,9 @@ not know.
 
 ## Changelog
 
+- v0.9 (2026-11-17) — *Check first* (§4.3) also works from the `.beads/issues.jsonl` snapshot, when `bd` cannot be
+  read: "still open in the snapshot but named in recent commits". Found by the `stale` task of `eval/resume`.
+
 - v0.8 (2026-11-17) — `## Upstream changes` (§4.4a) and the `upstream_changes` JSON key: what moved in the
   linked repositories next to this one since its last commit. Omitted when there is nothing to say.
 
