@@ -138,7 +138,7 @@ func RenderHandoff(bs []Block, o Options) string {
 	}
 	var doc string
 	for _, l := range levels {
-		doc = renderHandoff(bs, l.tasks, l.extras, l.full)
+		doc = renderHandoff(bs, l.tasks, l.extras, l.full, o.Root)
 		if handoff.EstimateTokens(doc) <= o.MaxTokens {
 			return doc
 		}
@@ -146,7 +146,7 @@ func RenderHandoff(bs []Block, o Options) string {
 	return doc
 }
 
-func renderHandoff(bs []Block, tasks, extras, full int) string {
+func renderHandoff(bs []Block, tasks, extras, full int, root string) string {
 	var b strings.Builder
 	p := func(f string, a ...any) { b.WriteString(clean(fmt.Sprintf(f, a...)) + "\n") }
 	p("# Workspace handoff — %d repositories", len(bs))
@@ -176,10 +176,14 @@ func renderHandoff(bs []Block, tasks, extras, full int) string {
 		}
 		p("%s", head)
 		for _, u := range r.Upstream {
-			p("- upstream changes: `%s` has %d commit(s) since the last commit here (latest %s)", u.ID, u.Commits, u.Last)
-			for _, sub := range u.Subjects {
-				p("  - %s", sub)
+			p("- upstream changed after the last commit here, check before building on it:")
+			rel := u.Path
+			if root != "" {
+				if x, err := filepath.Rel(root, u.Path); err == nil {
+					rel = x
+				}
 			}
+			handoff.RenderMoved(func(f string, a ...any) { p("  "+f, a...) }, u, rel)
 		}
 		if r.NoTaskList {
 			p("- tasks: no task list in git (unknown, not zero)")

@@ -134,12 +134,19 @@ its `tasks.md`. Without the `next:` line agents explored the code to find it (E2
 
 Present only when `relai.yaml` has `links:` and at least one linked repository is a git repository in
 the same parent folder (matched by its `relai.yaml` `id`, else its folder name) with commits made after
-the last commit of this repository. It is omitted otherwise: no placeholder, no tokens. One line per
-linked repository, at most 3: id, number of commits since, date of its last commit, and the
-`relai handoff ../<id>` to run before relying on it, then the subjects of its newest commits since (at most 2, 90 characters
-each): what changed, not only that something did. A link that matches no neighbour is not reported
-and not guessed. The section sits right after *State*, also in degraded mode; it is never cut (§5): at most
-3 short lines, and it says that a neighbour moved. Reads git only.
+the last commit of this repository. It is omitted otherwise: no placeholder, no tokens. It opens with an
+instruction (check what changed before building on it), then for each linked repository, at most 3:
+
+- id, path, number of commits since, date of its last commit;
+- `commit:` the subjects of its newest commits since, at most 2 (90 characters each);
+- `note:` its dated `.relai/notes.md` lines (decisions, pitfalls; not *Next session*) dated on or after the
+  day of this repository's last commit, newest first, at most 2 (140 characters each);
+- `read it first:` the git command that shows those commits.
+
+The content is there on purpose: in the measures, a line that only said *that* a neighbour moved was read
+and not followed by Claude Haiku and by Codex. A link that matches no neighbour is not reported and not
+guessed. The section sits right after *State*, also in degraded mode; it is never cut (§5). Reads git and
+files only.
 
 ### 4.5 `## Harness`
 
@@ -267,8 +274,9 @@ not know.
 
 ## Changelog
 
-- v0.10 (2026-11-17) — *Upstream changes* (§4.4a) shows the subjects of the newest upstream commits, and the JSON
-  `upstream_changes` has `subjects`. Reason: in the measure with Haiku and Codex, the line that only said that a linked
+- v0.10 (2026-11-17) — *Upstream changes* (§4.4a) opens with an instruction and shows what changed: the subjects of
+  the newest upstream commits, the upstream dated notes since, and the command to read them; the JSON `upstream_changes`
+  has `subjects` and `notes`. Reason: in the measure with Haiku and Codex, the line that only said that a linked
   repository had moved was read and not followed. Not yet re-measured: see `eval/results/2026-11-17-multi-repo.md`.
 
 - v0.9 (2026-11-17) — *Check first* (§4.3) also works from the `.beads/issues.jsonl` snapshot, when `bd` cannot be

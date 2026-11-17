@@ -429,13 +429,15 @@ func TestUpstreamSectionOnlyWhenALinkedNeighbourMoved(t *testing.T) {
 		return d
 	}
 	app := mk("app", "2026-10-01")
-	mk("lib", "2026-11-02")
+	lib := mk("lib", "2026-11-02")
+	_ = os.MkdirAll(filepath.Join(lib, ".relai"), 0o755)
+	_ = os.WriteFile(filepath.Join(lib, ".relai", "notes.md"), []byte("### Decisions\n- 2026-09-01 — old decision\n- 2026-11-02 — use v2\n\n### Next session\n- 2026-11-03 — not a decision\n"), 0o644)
 	_ = os.WriteFile(filepath.Join(app, "relai.yaml"), []byte("id: app\nlinks: [lib, absent]\n"), 0o644)
 	doc, err := Build(app, DefaultOptions())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(doc, "## Upstream changes") || !strings.Contains(doc, "`lib`: 1 commit(s), latest 2026-11-02") || !strings.Contains(doc, "  - x") || strings.Contains(doc, "absent") {
+	if !strings.Contains(doc, "## Upstream changes") || !strings.Contains(doc, "`lib` (`../lib`): 1 commit(s) since, latest 2026-11-02") || !strings.Contains(doc, "  - commit: x") || !strings.Contains(doc, "  - note: 2026-11-02 — use v2") || strings.Contains(doc, "old decision") || !strings.Contains(doc, "read it first: `git -C ../lib log -3 --stat`") || strings.Contains(doc, "absent") {
 		t.Errorf("unexpected upstream section:\n%s", doc)
 	}
 	_ = os.WriteFile(filepath.Join(app, "relai.yaml"), []byte("id: app\n"), 0o644)

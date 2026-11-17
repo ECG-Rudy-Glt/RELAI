@@ -17,6 +17,41 @@ type Moved struct {
 	Commits  int      `json:"commits"`
 	Last     string   `json:"last_commit"`        // YYYY-MM-DD of the linked repository's last commit
 	Subjects []string `json:"subjects,omitempty"` // subjects of its newest commits since, at most 2: what changed, not only that something did
+	Notes    []string `json:"notes,omitempty"`    // its dated notes (decisions, pitfalls) since, at most 2: the decision itself, not a pointer to it
+	Path     string   `json:"-"`                  // where it was found, for the command to read it
+}
+
+// datedNotesSince returns the lines of path's .relai/notes.md that start with "- YYYY-MM-DD" on or after day,
+// outside the "Next session" section, newest first, at most n.
+func datedNotesSince(path, day string, n int) []string {
+	b, err := os.ReadFile(filepath.Join(path, ".relai", "notes.md"))
+	if err != nil {
+		return nil
+	}
+	var out []string
+	next := false
+	for _, l := range strings.Split(string(b), "\n") {
+		t := strings.TrimSpace(l)
+		if strings.HasPrefix(t, "### ") {
+			next = strings.EqualFold(strings.TrimSpace(t[4:]), "Next session")
+			continue
+		}
+		if next || !strings.HasPrefix(t, "- ") || len(t) < 12 {
+			continue
+		}
+		d := t[2:12]
+		if len(d) == 10 && d[4] == '-' && d[7] == '-' && d >= day {
+			out = append(out, short(cleanControl(t[2:]), 140))
+		}
+	}
+	// notes are appended in date order: the newest are at the end
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
+	}
+	if len(out) > n {
+		out = out[:n]
+	}
+	return out
 }
 
 // UpstreamMoved lists, for each id of links that find resolves to a repository, the commits made there
@@ -49,7 +84,12 @@ func UpstreamMoved(dir string, links []string, find func(id string) string) []Mo
 				subjects = append(subjects, short(cleanControl(l), 90))
 			}
 		}
-		out = append(out, Moved{ID: cleanControl(l), Commits: n, Last: strings.TrimSpace(string(last)), Subjects: subjects})
+		day := strings.TrimSpace(string(since))
+		if len(day) >= 10 {
+			day = day[:10]
+		}
+		out = append(out, Moved{ID: cleanControl(l), Commits: n, Last: strings.TrimSpace(string(last)), Subjects: subjects,
+			Notes: datedNotesSince(path, day, 2), Path: path})
 	}
 	return out
 }

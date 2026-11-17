@@ -136,7 +136,8 @@ func main() {
 				exitOn(jerr)
 				doc = string(b)
 			} else {
-				doc = workspace.RenderHandoff(blocks, workspace.Options{MaxTokens: o.MaxTokens})
+				root, _ := filepath.Abs(dirArg(fs))
+				doc = workspace.RenderHandoff(blocks, workspace.Options{MaxTokens: o.MaxTokens, Root: root})
 			}
 		} else if *asJSON {
 			var b []byte
