@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/ECG-Rudy-Glt/RELAI/internal/handoff"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/taskref"
 )
 
 // Closure is a task a commit on the default branch says it closes.
@@ -83,7 +84,7 @@ func Build(dir string, limit int) (Plan, error) {
 					if closes(body, id) {
 						closed[id] = true
 						p.Close = append(p.Close, Closure{Task: id, Commit: sha, Subject: subject})
-					} else if !named[id] && mentions(body, id) {
+					} else if !named[id] && mentions(body, id) && !taskref.LeftOpen(dir, sha, id) {
 						named[id] = true
 						p.Named = append(p.Named, Closure{Task: id, Commit: sha, Subject: subject})
 					}
@@ -119,12 +120,12 @@ func closes(msg, id string) bool {
 	// The keyword must be followed directly by task ids ("Closes a-1, a-2 and a-3"), never by free text:
 	// "Fixes typo in docs, see a-1" mentions a-1, it does not close it.
 	tok := `#?(?:[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)+|\d+)`
-	re := regexp.MustCompile(`(?im)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b:?[ \t]+(?:` + tok + `(?:[ \t]*(?:,|&|\band\b)?[ \t]+))*#?` + regexp.QuoteMeta(id) + `(?:[^A-Za-z0-9_-]|$)`)
+	re := regexp.MustCompile(`(?im)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b:?[ \t]+(?:` + tok + `(?:[ \t]*(?:,|&|\band\b)?[ \t]+))*#?` + regexp.QuoteMeta(id) + taskref.End)
 	return re.MatchString(msg)
 }
 
 func mentions(msg, id string) bool {
-	return regexp.MustCompile(`(^|[^A-Za-z0-9_.-])#?` + regexp.QuoteMeta(id) + `($|[^A-Za-z0-9_-])`).MatchString(msg)
+	return taskref.Mentions(msg, id)
 }
 
 func defaultBranch(dir string) string {

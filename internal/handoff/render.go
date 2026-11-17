@@ -3,8 +3,9 @@ package handoff
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/ECG-Rudy-Glt/RELAI/internal/taskref"
 )
 
 // render builds the document. noteLines < 0 means "all notes".
@@ -245,7 +246,9 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 }
 
 // namedInCommits lists open tasks whose ID appears in a recent commit subject: often work that was
-// merged without closing the task, which a stale task list would otherwise present as to do.
+// merged without closing the task, which a stale task list would otherwise present as to do. The id
+// must be whole (a child "a-1.2" does not name "a-1"), epics are skipped, and a commit that left the
+// task open in its own .beads/issues.jsonl created or updated it, so it does not count.
 func namedInCommits(s sources) []string {
 	var out []string
 	seen := map[string]bool{}
@@ -261,9 +264,12 @@ func namedInCommits(s sources) []string {
 				continue
 			}
 			seen[t.ID] = true
-			re := regexp.MustCompile(`(^|[^\w-])` + regexp.QuoteMeta(t.ID) + `($|[^\w-])`)
+			if t.Type == "epic" {
+				continue // an epic is a grouping: its id is named while its children are worked on
+			}
 			for _, c := range s.commits {
-				if re.MatchString(c) {
+				sha, _, _ := strings.Cut(c, " ")
+				if taskref.Mentions(c, t.ID) && !taskref.LeftOpen(s.dir, sha, t.ID) {
 					out = append(out, fmt.Sprintf("`%s` %s, in %s", t.ID, t.Title, c))
 					break
 				}
