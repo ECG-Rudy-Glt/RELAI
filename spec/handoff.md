@@ -136,7 +136,8 @@ Present only when `relai.yaml` has `links:` and at least one linked repository i
 the same parent folder (matched by its `relai.yaml` `id`, else its folder name) with commits made after
 the last commit of this repository. It is omitted otherwise: no placeholder, no tokens. One line per
 linked repository, at most 3: id, number of commits since, date of its last commit, and the
-`relai handoff ../<id>` to run before relying on it. A link that matches no neighbour is not reported
+`relai handoff ../<id>` to run before relying on it, then the subjects of its newest commits since (at most 2, 90 characters
+each): what changed, not only that something did. A link that matches no neighbour is not reported
 and not guessed. The section sits right after *State*, also in degraded mode; it is never cut (§5): at most
 3 short lines, and it says that a neighbour moved. Reads git only.
 
@@ -265,6 +266,10 @@ Lists are `[]` when empty, never `null`. A new key is a minor change; consumers 
 not know.
 
 ## Changelog
+
+- v0.10 (2026-11-17) — *Upstream changes* (§4.4a) shows the subjects of the newest upstream commits, and the JSON
+  `upstream_changes` has `subjects`. Reason: in the measure with Haiku and Codex, the line that only said that a linked
+  repository had moved was read and not followed. Not yet re-measured: see `eval/results/2026-11-17-multi-repo.md`.
 
 - v0.9 (2026-11-17) — *Check first* (§4.3) also works from the `.beads/issues.jsonl` snapshot, when `bd` cannot be
   read: "still open in the snapshot but named in recent commits". Found by the `stale` task of `eval/resume`.

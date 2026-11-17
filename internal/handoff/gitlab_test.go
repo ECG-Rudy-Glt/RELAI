@@ -239,7 +239,7 @@ func TestGitLabJSONNamesTheBackend(t *testing.T) {
 	if err := json.Unmarshal(raw, &d); err != nil {
 		t.Fatal(err)
 	}
-	if d.Format != "0.9" || d.Tasks.Source != "gitlab" || len(d.Tasks.InProgress) != 1 || d.Tasks.InProgress[0].ID != "#12" || len(d.Tasks.Open) != 2 {
+	if d.Format != "0.10" || d.Tasks.Source != "gitlab" || len(d.Tasks.InProgress) != 1 || d.Tasks.InProgress[0].ID != "#12" || len(d.Tasks.Open) != 2 {
 		t.Errorf("tasks are wrong: %+v", d)
 	}
 }

@@ -13,9 +13,10 @@ import (
 
 // Moved says that a repository this one links to has commits newer than this one's last commit.
 type Moved struct {
-	ID      string `json:"id"`
-	Commits int    `json:"commits"`
-	Last    string `json:"last_commit"` // YYYY-MM-DD of the linked repository's last commit
+	ID       string   `json:"id"`
+	Commits  int      `json:"commits"`
+	Last     string   `json:"last_commit"`        // YYYY-MM-DD of the linked repository's last commit
+	Subjects []string `json:"subjects,omitempty"` // subjects of its newest commits since, at most 2: what changed, not only that something did
 }
 
 // UpstreamMoved lists, for each id of links that find resolves to a repository, the commits made there
@@ -42,7 +43,13 @@ func UpstreamMoved(dir string, links []string, find func(id string) string) []Mo
 			continue
 		}
 		last, _ := exec.Command("git", "-C", path, "log", "-1", "--format=%cs").Output()
-		out = append(out, Moved{ID: cleanControl(l), Commits: n, Last: strings.TrimSpace(string(last))})
+		var subjects []string
+		if so, err := exec.Command("git", "-C", path, "log", "-2", "--format=%s", "--since="+strings.TrimSpace(string(since))).Output(); err == nil {
+			for _, l := range lines(string(so)) {
+				subjects = append(subjects, short(cleanControl(l), 90))
+			}
+		}
+		out = append(out, Moved{ID: cleanControl(l), Commits: n, Last: strings.TrimSpace(string(last)), Subjects: subjects})
 	}
 	return out
 }

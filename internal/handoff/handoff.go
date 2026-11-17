@@ -13,7 +13,7 @@ import (
 )
 
 // FormatVersion is the version of spec/handoff.md this package implements.
-const FormatVersion = "0.9"
+const FormatVersion = "0.10"
 
 // Options controls what goes into the handoff.
 type Options struct {

@@ -170,7 +170,7 @@ func TestBuildBasics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.9)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
+	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.10)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("missing %q in:\n%s", want, doc)
 		}
@@ -435,7 +435,7 @@ func TestUpstreamSectionOnlyWhenALinkedNeighbourMoved(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(doc, "## Upstream changes") || !strings.Contains(doc, "`lib`: 1 commit(s), latest 2026-11-02") || strings.Contains(doc, "absent") {
+	if !strings.Contains(doc, "## Upstream changes") || !strings.Contains(doc, "`lib`: 1 commit(s), latest 2026-11-02") || !strings.Contains(doc, "  - x") || strings.Contains(doc, "absent") {
 		t.Errorf("unexpected upstream section:\n%s", doc)
 	}
 	_ = os.WriteFile(filepath.Join(app, "relai.yaml"), []byte("id: app\n"), 0o644)

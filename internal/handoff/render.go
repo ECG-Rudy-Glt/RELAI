@@ -61,6 +61,9 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 				break
 			}
 			p("- `%s`: %d commit(s), latest %s — `relai handoff ../%s` before relying on it", u.ID, u.Commits, u.Last, u.ID)
+			for _, sub := range u.Subjects {
+				p("  - %s", sub)
+			}
 		}
 	}
 
