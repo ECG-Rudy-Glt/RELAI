@@ -1,0 +1,282 @@
+package workspace
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/ECG-Rudy-Glt/RELAI/internal/handoff"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
+	"github.com/ECG-Rudy-Glt/RELAI/internal/scan"
+)
+
+// HandoffVersion is the version of the workspace handoff format.
+const HandoffVersion = "0.1"
+
+// Upstream says that a repository this one links to has commits newer than this one's last commit.
+type Upstream struct {
+	ID      string `json:"id"`
+	Commits int    `json:"commits"`
+	Last    string `json:"last_commit"`
+}
+
+// Block is one repository of the workspace handoff.
+type Block struct {
+	Name       string                `json:"name"`
+	ID         string                `json:"id"`
+	LastCommit string                `json:"last_commit,omitempty"`
+	Branch     string                `json:"branch,omitempty"`
+	Dirty      int                   `json:"uncommitted_files"`
+	NoTaskList bool                  `json:"no_task_list,omitempty"`
+	Doing      []handoff.TaskBrief   `json:"in_progress,omitempty"`
+	Ready      []handoff.TaskBrief   `json:"open,omitempty"`
+	TasksAsOf  string                `json:"tasks_as_of,omitempty"` // date of the last commit of .beads/issues.jsonl
+	Open       int                   `json:"open_tasks"`
+	Epics      int                   `json:"open_epics"`
+	Changes    []handoff.ChangeBrief `json:"-"`
+	Next       []string              `json:"next,omitempty"`
+	Upstream   []Upstream            `json:"upstream_changes,omitempty"`
+	Links      []string              `json:"links,omitempty"`
+}
+
+// LoadBlocks reads every git repository found in dir (depth levels down, symbolic links followed).
+func LoadBlocks(dir string, depth int) ([]Block, error) {
+	repos, err := scan.FindDepth(dir, depth)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	byID := map[string]scan.Repo{}
+	var kept []scan.Repo
+	for _, r := range repos {
+		if k := scan.Identity(r.Path); !seen[k] {
+			seen[k] = true
+			kept = append(kept, r)
+			byID[r.Name] = r
+			if r.ID != "" {
+				byID[r.ID] = r
+			}
+		}
+	}
+	var out []Block
+	for _, r := range kept {
+		br := handoff.Brief(r.Path)
+		b := Block{Name: r.Name, ID: r.Name, LastCommit: r.LastCommit, Branch: br.Branch, Dirty: br.Dirty, Epics: br.Epics, Changes: br.Changes, Next: br.Next, NoTaskList: !hasTaskList(r.Path)}
+		if r.ID != "" {
+			b.ID = r.ID
+		}
+		for _, t := range br.Tasks {
+			if t.Status == "in_progress" {
+				b.Doing = append(b.Doing, t)
+			} else {
+				b.Ready = append(b.Ready, t)
+			}
+		}
+		b.Open = len(b.Ready)
+		if o, err := exec.Command("git", "-C", r.Path, "log", "-1", "--format=%cs", "--", ".beads/issues.jsonl").Output(); err == nil {
+			b.TasksAsOf = strings.TrimSpace(string(o))
+		}
+		if raw, err := readManifest(r.Path); err == nil {
+			b.Links = raw.Links
+		}
+		b.Upstream = upstream(r, b.Links, byID)
+		out = append(out, b)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].LastCommit != out[j].LastCommit {
+			return out[i].LastCommit > out[j].LastCommit
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
+}
+
+func readManifest(path string) (index.Manifest, error) {
+	b, err := os.ReadFile(filepath.Join(path, "relai.yaml"))
+	if err != nil {
+		return index.Manifest{}, err
+	}
+	return index.ParseManifest(b), nil
+}
+
+// upstream lists, for each repository this one declares a link to and that is in the same folder, the
+// commits made there after this repository's last commit: what moved while nobody touched this one.
+func upstream(r scan.Repo, links []string, byID map[string]scan.Repo) []Upstream {
+	since, err := exec.Command("git", "-C", r.Path, "log", "-1", "--format=%cI").Output()
+	if err != nil || strings.TrimSpace(string(since)) == "" {
+		return nil
+	}
+	var out []Upstream
+	for _, l := range links {
+		u, ok := byID[l]
+		if !ok || scan.Identity(u.Path) == scan.Identity(r.Path) {
+			continue
+		}
+		o, err := exec.Command("git", "-C", u.Path, "rev-list", "--count", "--since="+strings.TrimSpace(string(since)), "HEAD").Output()
+		if err != nil {
+			continue
+		}
+		n, _ := strconv.Atoi(strings.TrimSpace(string(o)))
+		if n > 0 {
+			out = append(out, Upstream{ID: l, Commits: n, Last: u.LastCommit})
+		}
+	}
+	return out
+}
+
+// HandoffJSON returns the blocks as JSON, without the budget cuts.
+func HandoffJSON(bs []Block) ([]byte, error) {
+	if bs == nil {
+		bs = []Block{}
+	}
+	b, err := json.MarshalIndent(struct {
+		Format string  `json:"format"`
+		Repos  []Block `json:"repos"`
+	}{HandoffVersion, bs}, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return append(b, '\n'), nil
+}
+
+// RenderHandoff writes one block per repository within the token budget. The budget is met by showing
+// fewer tasks per block, then dropping the notes and changes, then listing the least recently active
+// repositories by name only.
+func RenderHandoff(bs []Block, o Options) string {
+	if o.MaxTokens <= 0 {
+		o.MaxTokens = 1500
+	}
+	type level struct{ tasks, extras, full int }
+	n := len(bs)
+	var levels []level
+	for _, t := range []int{3, 2, 1} {
+		levels = append(levels, level{t, 2, n})
+	}
+	levels = append(levels, level{1, 1, n}, level{1, 0, n}, level{0, 0, n})
+	for full := n - 1; full >= 0; full-- {
+		levels = append(levels, level{0, 0, full})
+	}
+	var doc string
+	for _, l := range levels {
+		doc = renderHandoff(bs, l.tasks, l.extras, l.full)
+		if handoff.EstimateTokens(doc) <= o.MaxTokens {
+			return doc
+		}
+	}
+	return doc
+}
+
+func renderHandoff(bs []Block, tasks, extras, full int) string {
+	var b strings.Builder
+	p := func(f string, a ...any) { b.WriteString(clean(fmt.Sprintf(f, a...)) + "\n") }
+	p("# Workspace handoff — %d repositories", len(bs))
+	p("")
+	p("Generated by `relai handoff --workspace` (format v%s). Read from files only (git, `.beads/issues.jsonl`, `openspec/`, `.relai/notes.md`): task counts may lag the live list. Open a repository's own `relai handoff <dir>` before working in it.", HandoffVersion)
+	if len(bs) == 0 {
+		p("")
+		p("(no git repository found in this folder)")
+		return b.String()
+	}
+	var rest []Block
+	for i, r := range bs {
+		if i >= full {
+			rest = append(rest, r)
+			continue
+		}
+		p("")
+		head := fmt.Sprintf("## %s", r.ID)
+		if r.Branch != "" {
+			head += fmt.Sprintf(" — `%s`", r.Branch)
+		}
+		if r.Dirty > 0 {
+			head += fmt.Sprintf(", %d uncommitted", r.Dirty)
+		}
+		if r.LastCommit != "" {
+			head += ", last commit " + r.LastCommit
+		}
+		p("%s", head)
+		for _, u := range r.Upstream {
+			p("- upstream changes: `%s` has %d commit(s) since the last commit here (latest %s)", u.ID, u.Commits, u.Last)
+		}
+		if r.NoTaskList {
+			p("- tasks: no task list in git (unknown, not zero)")
+		} else {
+			p("- tasks%s: %d open, %d in progress%s", asOf(r), r.Open, len(r.Doing), epicNote(r.Epics))
+			shown := 0
+			for _, t := range append(append([]handoff.TaskBrief{}, r.Doing...), r.Ready...) {
+				if shown >= tasks {
+					break
+				}
+				p("  - `%s` P%d %s", t.ID, t.Priority, short(t.Title, 70))
+				shown++
+			}
+		}
+		if extras >= 1 {
+			for j, c := range r.Changes {
+				if j == 2 {
+					p("- … (%d more changes)", len(r.Changes)-2)
+					break
+				}
+				line := fmt.Sprintf("- change `%s` %d/%d", c.Name, c.Done, c.Total)
+				if c.Next != "" {
+					line += " — next: " + short(c.Next, 70)
+				}
+				p("%s", line)
+			}
+		}
+		if extras >= 2 {
+			for j, l := range r.Next {
+				if j == 2 {
+					break
+				}
+				p("- next session: %s", short(l, 90))
+			}
+		}
+	}
+	if len(rest) > 0 {
+		p("")
+		p("## Not shown in full (%d, least recently active)", len(rest))
+		var ids []string
+		for _, r := range rest {
+			ids = append(ids, r.ID)
+		}
+		p("%s", strings.Join(ids, ", "))
+	}
+	return b.String()
+}
+
+// epicNote says that unfinished epics are not in the counts, so the numbers can be compared with
+// `bd list`, which counts them.
+func epicNote(n int) string {
+	switch n {
+	case 0:
+		return ""
+	case 1:
+		return " (+1 epic not counted)"
+	}
+	return fmt.Sprintf(" (+%d epics not counted)", n)
+}
+
+// hasTaskList is true when the repository keeps a copy of its tasks in git. A `.beads` folder alone is
+// not one: the database may live only on the machine that made it, and "0 open" would then be false.
+func hasTaskList(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, ".beads", "issues.jsonl"))
+	return err == nil
+}
+
+// asOf names the date of the copy of the task list that was read, and flags it when the repository
+// has moved since: the live list (`bd list`) may then differ.
+func asOf(r Block) string {
+	switch {
+	case r.TasksAsOf == "":
+		return " (list not committed yet)"
+	case r.LastCommit != "" && r.TasksAsOf < r.LastCommit:
+		return " (list of " + r.TasksAsOf + ", older than the last commit: may lag)"
+	}
+	return " (list of " + r.TasksAsOf + ")"
+}

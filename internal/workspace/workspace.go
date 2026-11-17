@@ -35,6 +35,7 @@ type Project struct {
 	Links      []string            `json:"links,omitempty"`
 	Open       int                 `json:"open_tasks"`
 	Doing      int                 `json:"tasks_in_progress"`
+	Epics      int                 `json:"open_epics"`
 	Top        []handoff.TaskBrief `json:"top_tasks,omitempty"`    // most urgent unfinished tasks
 	Remote     bool                `json:"remote,omitempty"`       // a clone URL: not read here
 	NoTaskList bool                `json:"no_task_list,omitempty"` // no .beads/issues.jsonl: "no list" is not "no tasks"
@@ -87,6 +88,7 @@ func Load(entries []index.Entry) []Project {
 			p.NoTaskList = true
 		}
 		tasks := handoff.SnapshotBrief(e.Source)
+		p.Epics = handoff.SnapshotEpics(e.Source)
 		for _, t := range tasks {
 			if t.Status == "in_progress" {
 				p.Doing++
@@ -180,7 +182,7 @@ func render(ps []Project, tasks, full, caps int) string {
 		case pr.NoTaskList:
 			facts = append(facts, "no task list in git (unknown, not zero)")
 		default:
-			facts = append(facts, fmt.Sprintf("%d open, %d in progress", pr.Open, pr.Doing))
+			facts = append(facts, fmt.Sprintf("%d open, %d in progress%s", pr.Open, pr.Doing, epicNote(pr.Epics)))
 		}
 		if caps > 0 && len(pr.Provides) > 0 {
 			shown := pr.Provides

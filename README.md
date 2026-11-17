@@ -82,6 +82,7 @@ Run `relai <command> -h` for options. `relai tidy`, `relai note archive` and `re
 | **Several repositories** | |
 | `relai index build` | Collect each repo's `relai.yaml` into an index (`--scan <folder>` finds repos) |
 | `relai workspace` | One short overview of every indexed project |
+| `relai handoff --workspace <folder>` | One compact block per repository of a folder: tasks, next steps, upstream changes |
 | `relai find <capability>` | Which repos already provide it; `--consumers` for who uses it |
 | `relai discover --links <folder>` | Mentions between repos, as evidence; `--propose`, `--prompt` |
 | `relai new <template> <dir>` | Scaffold a repo from your own template |

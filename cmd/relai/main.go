@@ -116,13 +116,25 @@ func main() {
 	case "handoff":
 		o := handoff.DefaultOptions()
 		fs := flag.NewFlagSet("handoff", flag.ExitOnError)
-		fs.IntVar(&o.MaxTokens, "max-tokens", o.MaxTokens, "token budget for the whole handoff")
+		fs.IntVar(&o.MaxTokens, "max-tokens", o.MaxTokens, "token budget for the whole handoff (1,500 with --workspace unless given)")
 		out := fs.String("o", "", "write to this file instead of stdout (e.g. .relai/handoff.md)")
 		asJSON := fs.Bool("json", false, "print the same facts as JSON, without the budget cuts")
+		ws := fs.Bool("workspace", false, "treat the argument as a folder of repositories: one compact block per repository")
+		wsDepth := fs.Int("depth", 1, "with --workspace: how many folder levels to look down for repositories")
 		_ = fs.Parse(reorderArgs(fs, os.Args[2:]))
 		var doc string
 		var err error
-		if *asJSON {
+		if *ws {
+			blocks, berr := workspace.LoadBlocks(dirArg(fs), *wsDepth)
+			exitOn(berr)
+			if *asJSON {
+				b, jerr := workspace.HandoffJSON(blocks)
+				exitOn(jerr)
+				doc = string(b)
+			} else {
+				doc = workspace.RenderHandoff(blocks, workspace.Options{MaxTokens: o.MaxTokens})
+			}
+		} else if *asJSON {
 			var b []byte
 			b, err = handoff.BuildJSON(dirArg(fs))
 			doc = string(b)

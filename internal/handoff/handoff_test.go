@@ -170,7 +170,7 @@ func TestBuildBasics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.7)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
+	for _, want := range []string{"# Handoff — ", "Branch `main`", "Recent commits:", "(format v0.8)", "no task graph", "## Harness", "no `.relai/notes.md` yet"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("missing %q in:\n%s", want, doc)
 		}
@@ -408,5 +408,38 @@ func TestHealthyBdIsUnchangedByTheFallback(t *testing.T) {
 	}
 	if strings.Contains(doc, "cannot be read") || strings.Contains(doc, "Fix the login redirect") {
 		t.Errorf("the snapshot must not appear when bd works:\n%s", doc)
+	}
+}
+
+func TestUpstreamSectionOnlyWhenALinkedNeighbourMoved(t *testing.T) {
+	root := t.TempDir()
+	mk := func(name, date string) string {
+		d := filepath.Join(root, name)
+		_ = os.MkdirAll(d, 0o755)
+		env := append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t",
+			"GIT_AUTHOR_DATE="+date+"T12:00:00Z", "GIT_COMMITTER_DATE="+date+"T12:00:00Z")
+		_ = os.WriteFile(filepath.Join(d, "f"), []byte(date), 0o644)
+		for _, a := range [][]string{{"init", "-q", "-b", "main"}, {"add", "-A"}, {"commit", "-q", "-m", "x"}} {
+			c := exec.Command("git", a...)
+			c.Dir, c.Env = d, env
+			if out, err := c.CombinedOutput(); err != nil {
+				t.Fatalf("git %v: %v %s", a, err, out)
+			}
+		}
+		return d
+	}
+	app := mk("app", "2026-10-01")
+	mk("lib", "2026-11-02")
+	_ = os.WriteFile(filepath.Join(app, "relai.yaml"), []byte("id: app\nlinks: [lib, absent]\n"), 0o644)
+	doc, err := Build(app, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(doc, "## Upstream changes") || !strings.Contains(doc, "`lib`: 1 commit(s), latest 2026-11-02") || strings.Contains(doc, "absent") {
+		t.Errorf("unexpected upstream section:\n%s", doc)
+	}
+	_ = os.WriteFile(filepath.Join(app, "relai.yaml"), []byte("id: app\n"), 0o644)
+	if doc, _ = Build(app, DefaultOptions()); strings.Contains(doc, "Upstream") {
+		t.Errorf("no links, no section:\n%s", doc)
 	}
 }

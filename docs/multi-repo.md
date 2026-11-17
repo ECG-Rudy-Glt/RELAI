@@ -153,11 +153,19 @@ active changes, the `### Next` of the notes — plus *upstream changes* when a r
 changed. Same rules as the single-repo handoff (deterministic, budgeted, pointers to
 `relai handoff <repo>` for detail).
 
-**What exists today.** `relai index build --scan` and `relai discover --links` find the repositories of a folder and the mentions between them (evidence for a person or agent to confirm; `relai.yaml` gets an optional `links:`). A first slice of this view ships as `relai workspace` (2026-11-04): from the index built by
-`relai index build` it prints one budgeted block per indexed project (last commit, open and in-progress
-task counts, the top tasks, what it provides), reading files only and never running `bd`. Still planned
-from the text above: the `### Next` of the notes, the `next:` of active changes, the *Check first* lines
-and *upstream changes*, which need the links between projects of phase 2.
+**What exists today.** `relai handoff --workspace <folder> [--depth N]` (2026-11-17) prints one block per git
+repository found in the folder (symbolic links followed, a repository found twice is shown once): branch and
+uncommitted files, last commit, open and in-progress task counts with the top tasks, the `next:` of each
+active change, the `### Next session` lines of the notes, and *upstream changes*: for each repository the
+`links:` of its `relai.yaml` name and that sits in the same folder, the number of commits made there after
+the last commit here. Everything is read from files and git, never `bd` or `openspec`, so the task counts
+come from the committed `.beads/issues.jsonl`: each block says the date of that copy, flags it when it is
+older than the repository's last commit, and says how many unfinished epics are not counted (`bd list`
+counts them). The single-repository handoff gets the same *Upstream changes* section (format v0.8) when a
+linked repository next to it moved. `relai workspace` is the older, index-based view (`relai index build`).
+`relai index build --scan` and `relai discover --links` find the repositories of a folder and the mentions
+between them (evidence for a person or agent to confirm; `relai.yaml` gets an optional `links:`).
+Not built: a `relai-workspace.yaml` listing paths, *Check first* lines in the workspace blocks.
 
 ## 8. Adopting it on existing repos
 

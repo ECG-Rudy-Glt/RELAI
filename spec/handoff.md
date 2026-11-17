@@ -130,6 +130,16 @@ name, completed/total tasks, status, then an indented `next:` line with the firs
 its `tasks.md`. Without the `next:` line agents explored the code to find it (E2, fixture F2:
 3 turns → 1). Ends with `Details: openspec show <name>.`
 
+### 4.4a `## Upstream changes`
+
+Present only when `relai.yaml` has `links:` and at least one linked repository is a git repository in
+the same parent folder (matched by its `relai.yaml` `id`, else its folder name) with commits made after
+the last commit of this repository. It is omitted otherwise: no placeholder, no tokens. One line per
+linked repository, at most 3: id, number of commits since, date of its last commit, and the
+`relai handoff ../<id>` to run before relying on it. A link that matches no neighbour is not reported
+and not guessed. The section sits right after *State*, also in degraded mode; it is never cut (§5): at most
+3 short lines, and it says that a neighbour moved. Reads git only.
+
 ### 4.5 `## Harness`
 
 What the project already gives agents, so the reader uses it instead of reinventing it. One line per
@@ -206,14 +216,14 @@ In degraded mode:
   pessimistic for English.
 - Default budget 2,000 tokens; MAY be changed by the caller (`--max-tokens`).
 - When over budget, cut in this order, one item at a time, re-checking after each cut:
-  0. the `Team signals:` line (§4.2), before anything else;
+  0. the `Team signals:` line (§4.2) before anything else;
   1. task lists (in progress, ready, blocked) down to 3 items each;
   2. recent commits down to 3;
   3. harness lines, from the last;
   4. in degraded mode only: the longer of recently-touched-files / open-markers (§4.7), one at a
      time, until both are empty;
   5. notes, from the end, replaced by `… (N more lines in .relai/notes.md)`.
-- *Check first* lines and the `next:` line of active changes are never cut: they carry the
+- *Check first* lines, the *Upstream changes* section and the `next:` line of active changes are never cut: they carry the
   contradictions and the next step.
 - Counts (`N total`) always show the full number, so the reader knows what was cut.
 
@@ -250,11 +260,14 @@ Top-level keys: `format`, `repo`, `degraded`, `state` (`branch`, `head`, `uncomm
 `tasks` (`source`: `beads`, `beads-snapshot`, `github`, `gitlab` or `none`; `problem` when the tasks could not
 be read; `in_progress`, `ready`, `blocked`, and `open` for a backend that does not say which tasks are
 ready), `changes` (`name`, `completed_tasks`, `total_tasks`, `status`, `next`), `changes_problem`,
-`harness`, `notes` (the lines of `notes.md`), and in degraded mode `recent_files` and `markers`.
+`upstream_changes` (`id`, `commits`, `last_commit`; `[]` when none), `harness`, `notes` (the lines of `notes.md`), and in degraded mode `recent_files` and `markers`.
 Lists are `[]` when empty, never `null`. A new key is a minor change; consumers ignore keys they do
 not know.
 
 ## Changelog
+
+- v0.8 (2026-11-17) — `## Upstream changes` (§4.4a) and the `upstream_changes` JSON key: what moved in the
+  linked repositories next to this one since its last commit. Omitted when there is nothing to say.
 
 - v0.7 (2026-11-16) — GitLab Issues as a second opt-in task backend, `tasks: gitlab` in `relai.yaml`, read
   with `glab` (§3, §4.3): the same network rule as GitHub (§6); `tasks.source` may be `gitlab` (§9); a
