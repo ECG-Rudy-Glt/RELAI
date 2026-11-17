@@ -1,0 +1,120 @@
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s1","run":3,"pass":true,"verdict":"PASS","turns":14,"cost":0.0593587,"input":233495,"output":2648}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s1","run":1,"pass":true,"verdict":"PASS","turns":9,"cost":0.053357,"input":174594,"output":2776}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s1","run":5,"pass":true,"verdict":"PASS","turns":15,"cost":0.06807440000000001,"input":294585,"output":2951}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s1","run":1,"pass":true,"verdict":"PASS","turns":14,"cost":0.0672884,"input":267856,"output":3165}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s1","run":2,"pass":true,"verdict":"PASS","turns":10,"cost":0.0669911,"input":289885,"output":3114}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s1","run":4,"pass":true,"verdict":"PASS","turns":16,"cost":0.08956050000000002,"input":468617,"output":3585}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s1","run":3,"pass":true,"verdict":"PASS","turns":10,"cost":0.0556368,"input":204830,"output":2491}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s1","run":4,"pass":true,"verdict":"PASS","turns":10,"cost":0.0540425,"input":202417,"output":2410}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s1","run":2,"pass":true,"verdict":"PASS","turns":12,"cost":0.06522489999999999,"input":266591,"output":2919}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s2","run":1,"pass":true,"verdict":"PASS","turns":12,"cost":0.0608889,"input":235989,"output":2778}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s1","run":5,"pass":true,"verdict":"PASS","turns":14,"cost":0.085972,"input":418251,"output":3617}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s2","run":2,"pass":true,"verdict":"PASS","turns":16,"cost":0.07270900000000001,"input":329094,"output":3001}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s2","run":4,"pass":true,"verdict":"PASS","turns":11,"cost":0.0675591,"input":318508,"output":2556}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s2","run":1,"pass":true,"verdict":"PASS","turns":8,"cost":0.0553544,"input":203479,"output":2634}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s2","run":5,"pass":true,"verdict":"PASS","turns":17,"cost":0.0816412,"input":415255,"output":3040}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s2","run":2,"pass":true,"verdict":"PASS","turns":9,"cost":0.04987040000000001,"input":174040,"output":2200}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s2","run":3,"pass":true,"verdict":"PASS","turns":16,"cost":0.09623029999999999,"input":493515,"output":3714}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s2","run":3,"pass":true,"verdict":"PASS","turns":12,"cost":0.06720530000000001,"input":294297,"output":2681}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s2","run":4,"pass":true,"verdict":"PASS","turns":8,"cost":0.051314,"input":174370,"output":2457}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s3","run":3,"pass":true,"verdict":"PASS","turns":8,"cost":0.0507483,"input":226878,"output":1712}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s2","run":5,"pass":true,"verdict":"PASS","turns":11,"cost":0.06309150000000001,"input":238100,"output":3068}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s3","run":4,"pass":true,"verdict":"PASS","turns":11,"cost":0.053371400000000006,"input":228362,"output":2030}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s3","run":1,"pass":true,"verdict":"PASS","turns":14,"cost":0.07740640000000001,"input":406534,"output":2834}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s3","run":2,"pass":true,"verdict":"PASS","turns":15,"cost":0.0818832,"input":438937,"output":2873}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"s3","run":5,"pass":true,"verdict":"PASS","turns":15,"cost":0.06001720000000001,"input":261981,"output":2331}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s3","run":1,"pass":true,"verdict":"PASS","turns":8,"cost":0.05285730000000001,"input":228787,"output":1902}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s3","run":2,"pass":true,"verdict":"PASS","turns":11,"cost":0.0625065,"input":318687,"output":1800}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s3","run":4,"pass":true,"verdict":"PASS","turns":10,"cost":0.0596758,"input":287953,"output":1955}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m1","run":1,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpr_1tjrvz/ab12.json'","turns":9,"cost":0.0460088,"input":170451,"output":1857}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s3","run":5,"pass":true,"verdict":"PASS","turns":10,"cost":0.06040100000000001,"input":289064,"output":1965}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"s3","run":3,"pass":true,"verdict":"PASS","turns":12,"cost":0.07533740000000001,"input":353561,"output":3125}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m1","run":2,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpcm6n5tw5/ab12.json'","turns":10,"cost":0.061149999999999996,"input":285161,"output":2355}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m1","run":3,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmppmgrt0le/ab12.json'","turns":12,"cost":0.050571700000000004,"input":201272,"output":2002}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m1","run":4,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpzczet46d/ab12.json'","turns":9,"cost":0.0493733,"input":199212,"output":1898}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m1","run":5,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpyxyj6k_a/ab12.json'","turns":14,"cost":0.07702859999999999,"input":408500,"output":2636}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m1","run":1,"pass":true,"verdict":"PASS","turns":16,"cost":0.0699563,"input":299372,"output":3055}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m1","run":3,"pass":true,"verdict":"PASS","turns":16,"cost":0.0743248,"input":333958,"output":3075}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m1","run":5,"pass":true,"verdict":"PASS","turns":11,"cost":0.0650594,"input":290579,"output":2711}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m2","run":1,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":11,"cost":0.06159130000000001,"input":314748,"output":1842}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m1","run":2,"pass":true,"verdict":"PASS","turns":22,"cost":0.11221310000000002,"input":581596,"output":4246}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m2","run":2,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":17,"cost":0.061206199999999995,"input":290478,"output":2066}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m1","run":4,"pass":true,"verdict":"PASS","turns":25,"cost":0.10295629999999999,"input":505638,"output":4439}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m2","run":4,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":13,"cost":0.04474979999999999,"input":169583,"output":1656}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m2","run":5,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":13,"cost":0.055247500000000005,"input":256472,"output":1846}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m2","run":3,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":18,"cost":0.08670020000000002,"input":522074,"output":2384}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m2","run":1,"pass":true,"verdict":"PASS","turns":13,"cost":0.0671494,"input":323333,"output":2403}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m2","run":2,"pass":true,"verdict":"PASS","turns":18,"cost":0.097278,"input":546728,"output":3185}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m2","run":4,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":15,"cost":0.0676908,"input":296826,"output":2819}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m2","run":3,"pass":true,"verdict":"PASS","turns":18,"cost":0.07458229999999999,"input":330741,"output":3247}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m3","run":1,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":9,"cost":0.049452699999999995,"input":199181,"output":1942}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m2","run":5,"pass":true,"verdict":"PASS","turns":15,"cost":0.07307739999999999,"input":380476,"output":2408}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m3","run":2,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":14,"cost":0.0728251,"input":375459,"output":2643}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m3","run":4,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":13,"cost":0.0645526,"input":315202,"output":2328}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m3","run":3,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":14,"cost":0.07613110000000001,"input":404461,"output":2647}
+{"fixtures":"resume2","model":"haiku","cond":"repo","task":"m3","run":5,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":17,"cost":0.08854599999999999,"input":500041,"output":2803}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m3","run":2,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":10,"cost":0.06123700000000001,"input":261193,"output":2619}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m3","run":1,"pass":true,"verdict":"PASS","turns":19,"cost":0.0881301,"input":399514,"output":4089}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m3","run":3,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":18,"cost":0.094033,"input":486226,"output":3691}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s1","run":1,"pass":true,"verdict":"PASS","turns":9,"cost":0.08687900000000001,"input":164631,"output":1885}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s1","run":2,"pass":true,"verdict":"PASS","turns":9,"cost":0.0850938,"input":164184,"output":1769}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s1","run":4,"pass":true,"verdict":"PASS","turns":8,"cost":0.07894100000000001,"input":135295,"output":1771}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m3","run":4,"pass":true,"verdict":"PASS","turns":15,"cost":0.09965849999999998,"input":428647,"output":5392}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s1","run":3,"pass":true,"verdict":"PASS","turns":9,"cost":0.0844068,"input":164068,"output":1722}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s1","run":1,"pass":true,"verdict":"PASS","turns":9,"cost":0.0726464,"input":109015,"output":1715}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s1","run":5,"pass":true,"verdict":"PASS","turns":8,"cost":0.0850332,"input":164955,"output":1680}
+{"fixtures":"resume2","model":"haiku","cond":"relai","task":"m3","run":5,"pass":true,"verdict":"PASS","turns":16,"cost":0.1133657,"input":449525,"output":6982}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s1","run":4,"pass":true,"verdict":"PASS","turns":9,"cost":0.0655594,"input":107703,"output":1218}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s1","run":5,"pass":true,"verdict":"PASS","turns":9,"cost":0.0708192,"input":135608,"output":1196}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s2","run":1,"pass":true,"verdict":"PASS","turns":4,"cost":0.059593800000000016,"input":106144,"output":902}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s2","run":2,"pass":true,"verdict":"PASS","turns":4,"cost":0.0595552,"input":106180,"output":894}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s1","run":3,"pass":true,"verdict":"PASS","turns":9,"cost":0.0655072,"input":107713,"output":1208}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s1","run":2,"pass":true,"verdict":"PASS","turns":9,"cost":0.0739936,"input":109164,"output":1801}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s2","run":2,"pass":true,"verdict":"PASS","turns":4,"cost":0.053367200000000004,"input":79900,"output":864}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s2","run":1,"pass":true,"verdict":"PASS","turns":4,"cost":0.054040000000000005,"input":79952,"output":912}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s2","run":3,"pass":true,"verdict":"PASS","turns":4,"cost":0.05376059999999999,"input":79929,"output":893}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s2","run":3,"pass":true,"verdict":"PASS","turns":5,"cost":0.0732138,"input":134556,"output":1447}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s2","run":5,"pass":true,"verdict":"PASS","turns":4,"cost":0.0525232,"input":79839,"output":805}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s2","run":4,"pass":true,"verdict":"PASS","turns":8,"cost":0.06419160000000002,"input":107130,"output":1166}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s2","run":5,"pass":true,"verdict":"PASS","turns":5,"cost":0.07262660000000001,"input":134458,"output":1409}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s2","run":4,"pass":true,"verdict":"PASS","turns":4,"cost":0.05952980000000001,"input":106125,"output":897}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s3","run":1,"pass":true,"verdict":"PASS","turns":7,"cost":0.0800626,"input":162548,"output":1539}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s3","run":3,"pass":true,"verdict":"PASS","turns":7,"cost":0.079592,"input":162219,"output":1516}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s3","run":2,"pass":true,"verdict":"PASS","turns":7,"cost":0.0804794,"input":162583,"output":1571}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s3","run":5,"pass":true,"verdict":"PASS","turns":7,"cost":0.07953020000000001,"input":162209,"output":1518}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"s3","run":4,"pass":true,"verdict":"PASS","turns":7,"cost":0.0801574,"input":162512,"output":1553}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s3","run":2,"pass":true,"verdict":"PASS","turns":6,"cost":0.0713584,"input":134582,"output":1394}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s3","run":1,"pass":true,"verdict":"PASS","turns":6,"cost":0.072658,"input":135308,"output":1438}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s3","run":3,"pass":true,"verdict":"PASS","turns":6,"cost":0.070582,"input":134475,"output":1339}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s3","run":4,"pass":true,"verdict":"PASS","turns":6,"cost":0.06709319999999999,"input":107124,"output":1479}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"s3","run":5,"pass":true,"verdict":"PASS","turns":6,"cost":0.0713564,"input":134576,"output":1399}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m1","run":1,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpfc8i95vh/ab12.json'","turns":8,"cost":0.0766468,"input":160939,"output":1364}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m1","run":2,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpdd8e7yga/ab12.json'","turns":8,"cost":0.07663600000000001,"input":160852,"output":1371}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m1","run":5,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmp30j5dd33/ab12.json'","turns":8,"cost":0.070428,"input":132447,"output":1373}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m1","run":3,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmp8e5x25ju/ab12.json'","turns":8,"cost":0.0712792,"input":133108,"output":1377}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m1","run":2,"pass":true,"verdict":"PASS","turns":6,"cost":0.0690632,"input":108658,"output":1458}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m1","run":4,"pass":false,"verdict":"FAIL: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmpzlwhnk74/ab12.json'","turns":10,"cost":0.0854482,"input":188514,"output":1547}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m1","run":3,"pass":true,"verdict":"PASS","turns":8,"cost":0.0873836,"input":189836,"output":1653}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m1","run":1,"pass":true,"verdict":"PASS","turns":9,"cost":0.07302,"input":134871,"output":1333}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m1","run":4,"pass":true,"verdict":"PASS","turns":8,"cost":0.069547,"input":133948,"output":1163}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m2","run":3,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":8,"cost":0.0692184,"input":132683,"output":1262}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m2","run":2,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":8,"cost":0.0744112,"input":159457,"output":1308}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m1","run":5,"pass":true,"verdict":"PASS","turns":9,"cost":0.08273860000000001,"input":162088,"output":1702}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m2","run":1,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":10,"cost":0.089416,"input":215001,"output":1496}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m2","run":5,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":8,"cost":0.0687176,"input":132692,"output":1221}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m2","run":4,"pass":false,"verdict":"FAIL: get_workers ignores SVC_WORKERS","turns":8,"cost":0.0742618,"input":160199,"output":1232}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m2","run":2,"pass":true,"verdict":"PASS","turns":10,"cost":0.076452,"input":161916,"output":1173}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m3","run":1,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":4,"cost":0.05627,"input":105132,"output":791}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m2","run":5,"pass":true,"verdict":"PASS","turns":6,"cost":0.06961260000000001,"input":135662,"output":1129}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m2","run":3,"pass":true,"verdict":"PASS","turns":6,"cost":0.072605,"input":136203,"output":1347}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m2","run":1,"pass":true,"verdict":"PASS","turns":9,"cost":0.0829928,"input":189853,"output":1298}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m2","run":4,"pass":true,"verdict":"PASS","turns":9,"cost":0.07596180000000001,"input":161508,"output":1169}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m3","run":3,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":4,"cost":0.056048600000000004,"input":105146,"output":772}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m3","run":4,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":4,"cost":0.0565926,"input":105189,"output":813}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m3","run":2,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":9,"cost":0.084012,"input":187219,"output":1561}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m3","run":2,"pass":true,"verdict":"PASS","turns":9,"cost":0.07278899999999999,"input":134906,"output":1334}
+{"fixtures":"resume2","model":"sonnet","cond":"repo","task":"m3","run":5,"pass":false,"verdict":"FAIL: weeks are not Monday-start: {'2026-11-01': 15, '2026-11-08': 21}","turns":7,"cost":0.0788316,"input":161884,"output":1443}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m3","run":3,"pass":true,"verdict":"PASS","turns":9,"cost":0.07178340000000001,"input":134794,"output":1260}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m3","run":1,"pass":true,"verdict":"PASS","turns":9,"cost":0.08983120000000001,"input":191019,"output":1811}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m3","run":4,"pass":true,"verdict":"PASS","turns":10,"cost":0.0743406,"input":135925,"output":1343}
+{"fixtures":"resume2","model":"sonnet","cond":"relai","task":"m3","run":5,"pass":true,"verdict":"PASS","turns":9,"cost":0.0945156,"input":217302,"output":1766}
