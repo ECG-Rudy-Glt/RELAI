@@ -131,6 +131,7 @@ func main() {
 		if *ws {
 			blocks, berr := workspace.LoadBlocks(dirArg(fs), *wsDepth)
 			exitOn(berr)
+			hintDeeper(os.Stderr, dirArg(fs), *wsDepth)
 			if *asJSON {
 				b, jerr := workspace.HandoffJSON(blocks)
 				exitOn(jerr)
@@ -170,6 +171,7 @@ func main() {
 		if *links || *propose {
 			repos, err := scan.FindDepth(target, *depth)
 			exitOn(err)
+			hintDeeper(os.Stderr, target, *depth)
 			ls := scan.Links(repos)
 			switch {
 			case *asJSON:

@@ -266,3 +266,35 @@ func TestWorktreesAreOneRepo(t *testing.T) {
 		t.Fatalf("want one repo app with one worktree, got %+v", repos)
 	}
 }
+
+// layered makes root/a, root/group/b, root/group/c and root/group/sub/d as git repositories, plus a
+// hidden root/.cache/e that no scan must count.
+func layered(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	for _, p := range []string{"a", "group/b", "group/c", "group/sub/d", ".cache/e"} {
+		d := filepath.Join(root, p)
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if out, err := exec.Command("git", "-C", d, "init", "-q").CombinedOutput(); err != nil {
+			t.Fatalf("git init: %v %s", err, out)
+		}
+	}
+	return root
+}
+
+func TestDeeperCountsOnlyTheNextLevel(t *testing.T) {
+	root := layered(t)
+	for _, c := range []struct{ depth, want int }{{0, 2}, {1, 2}, {2, 1}, {3, 0}} {
+		if got := Deeper(root, c.depth); got != c.want {
+			t.Errorf("Deeper(depth %d) = %d, want %d", c.depth, got, c.want)
+		}
+	}
+	if got := Deeper(filepath.Join(root, "a"), 1); got != 0 {
+		t.Errorf("a repository scanned itself has nothing deeper, got %d", got)
+	}
+	if got := Deeper(filepath.Join(root, "missing"), 1); got != 0 {
+		t.Errorf("a missing folder has nothing deeper, got %d", got)
+	}
+}
