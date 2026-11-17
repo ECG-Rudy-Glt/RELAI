@@ -90,9 +90,14 @@ var instructionFiles = []string{
 
 // docPattern matches handoff, journal and plan documents worth pointing at; docDir matches the
 // directories that hold such documents (a code directory named "handoff" is not one).
+// stateDoc matches, as a whole word of the file name, the documents that hold the current state of
+// the work and its pitfalls (in English and French: ETAT.md, PIEGES.md): a word, so "statement.md" is
+// not one. decisionFile matches a single file of decisions (DECISIONS.md), next to the adr/ folders.
 var (
-	docPattern = regexp.MustCompile(`(?i)(handoff|passation|journal|roadmap|todo|changelog|runbook|onboarding)`)
-	docDir     = regexp.MustCompile(`(?i)^(journals?|logbook|handoffs?|passations?|runbooks?)$`)
+	docPattern   = regexp.MustCompile(`(?i)(handoff|passation|journal|roadmap|todo|changelog|runbook|onboarding)`)
+	stateDoc     = regexp.MustCompile(`(?i)(^|[-_. ])(state|status|etat|état|pitfalls?|gotchas|pieges|pièges|lessons[-_]learned)([-_. ]|$)`)
+	decisionFile = regexp.MustCompile(`(?i)^(decisions?|decision[-_]log|adr)\.md$`)
+	docDir       = regexp.MustCompile(`(?i)^(journals?|logbook|handoffs?|passations?|runbooks?)$`)
 )
 
 // Scan inventories the project at dir.
@@ -161,12 +166,18 @@ func Scan(dir string) Inventory {
 			}
 			return
 		}
-		if strings.HasSuffix(strings.ToLower(name), ".md") && docPattern.MatchString(name) {
+		if !strings.HasSuffix(strings.ToLower(name), ".md") {
+			return
+		}
+		switch {
+		case decisionFile.MatchString(name):
+			adrs = append(adrs, rel)
+		case docPattern.MatchString(name), stateDoc.MatchString(strings.TrimSuffix(name, filepath.Ext(name))):
 			docs = append(docs, rel)
 		}
 	})
-	add(Decisions, "", adrs)
-	add(Docs, "", collapse(docs))
+	addShallowFirst(&inv, Decisions, adrs)
+	addShallowFirst(&inv, Docs, collapse(docs))
 
 	var ci []string
 	for _, g := range []string{".github/workflows/*.y*ml", ".forgejo/workflows/*.y*ml", ".gitea/workflows/*.y*ml"} {
@@ -177,6 +188,25 @@ func Scan(dir string) Inventory {
 	}
 	add(CI, "", ci)
 	return inv
+}
+
+// addShallowFirst adds a group whose items are paths, the ones nearest the root first (then by name):
+// a project's own state and decision files sit at its root, and when the list is cut for the handoff
+// they must not lose their place to a plan three folders down whose name happens to match.
+func addShallowFirst(inv *Inventory, kind string, items []string) {
+	if len(items) == 0 {
+		return
+	}
+	sort.Strings(items)
+	items = dedupe(items) // dedupe needs sorted input
+	depth := func(p string) int { return strings.Count(strings.TrimSuffix(p, "/"), "/") }
+	sort.SliceStable(items, func(i, j int) bool {
+		if di, dj := depth(items[i]), depth(items[j]); di != dj {
+			return di < dj
+		}
+		return items[i] < items[j]
+	})
+	inv.Groups = append(inv.Groups, Group{kind, "", items})
 }
 
 // Lines renders one compact line per group, for the handoff's Harness section.
