@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ECG-Rudy-Glt/RELAI/internal/backstage"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/discover"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/handoff"
 	"github.com/ECG-Rudy-Glt/RELAI/internal/index"
@@ -70,6 +71,9 @@ Usage:
   relai check [--outdated] [--strict] [--json] [dir]
                          relai validate + the handoff budget + drift from the hub at the pinned tag (hand edits
                          of vendored files); --outdated warns about a newer hub tag. Made for CI
+  relai export backstage [--type T] [--lifecycle L] [--namespace N] [-o <file>] [dir]
+                         print a Backstage catalog-info.yaml from relai.yaml (a Component, an API per capability
+                         provided). One-way export: Relai never reads or depends on Backstage
   relai hub init <dir>   scaffold a hub (CONVENTIONS.md, a skill, CI templates) in an empty directory
   relai new <template> <dir>
                          scaffold <dir> from <template> (a local path or clone URL), substituting
@@ -351,6 +355,33 @@ func main() {
 		if !*quiet && len(r.Closed)+len(r.DeletedBranches) == 0 && len(r.Notes) == 0 && p.Deferred == 0 {
 			fmt.Println("nothing to do.")
 		}
+	case "export":
+		if len(os.Args) < 3 || os.Args[2] != "backstage" {
+			fmt.Fprintln(os.Stderr, "usage: relai export backstage [--type T] [--lifecycle L] [--namespace N] [-o <file>] [dir]")
+			os.Exit(2)
+		}
+		fs := flag.NewFlagSet("export backstage", flag.ExitOnError)
+		typ := fs.String("type", "", "Component type (default service)")
+		life := fs.String("lifecycle", "", "lifecycle (default experimental)")
+		ns := fs.String("namespace", "", "catalog namespace (default default)")
+		outFile := fs.String("o", "", "write to this file instead of stdout")
+		_ = fs.Parse(reorderArgs(fs, os.Args[3:]))
+		raw, err := os.ReadFile(filepath.Join(dirArg(fs), "relai.yaml"))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "relai: no relai.yaml here — run `relai init` first")
+			os.Exit(1)
+		}
+		m := index.ParseManifest(raw)
+		if m.ID == "" {
+			fmt.Fprintln(os.Stderr, "relai: relai.yaml has no id")
+			os.Exit(1)
+		}
+		doc := backstage.Render(m, backstage.Options{Type: *typ, Lifecycle: *life, Namespace: *ns})
+		if *outFile == "" {
+			fmt.Print(doc)
+			return
+		}
+		exitOn(os.WriteFile(*outFile, []byte(doc), 0o644))
 	case "workspace":
 		fs := flag.NewFlagSet("workspace", flag.ExitOnError)
 		idx := fs.String("index", defaultIndexPath, "path to the index built by `relai index build`")
