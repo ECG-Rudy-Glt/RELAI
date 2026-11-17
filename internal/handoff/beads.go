@@ -74,3 +74,27 @@ func SnapshotBrief(dir string) []TaskBrief {
 	}
 	return out
 }
+
+// SnapshotEpics counts the unfinished epics of dir's .beads/issues.jsonl. SnapshotBrief leaves them
+// out (an epic is a grouping, not work to pick up), so a view that shows task counts must say that
+// they are not counted: `bd list` counts them, and two numbers that differ by one erode trust.
+func SnapshotEpics(dir string) int {
+	b, err := os.ReadFile(filepath.Join(dir, ".beads", "issues.jsonl"))
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for _, l := range strings.Split(string(b), "\n") {
+		var t snapTask
+		if json.Unmarshal([]byte(l), &t) != nil || t.ID == "" {
+			continue
+		}
+		switch t.Status {
+		case "open", "in_progress", "blocked":
+			if t.Type == "epic" {
+				n++
+			}
+		}
+	}
+	return n
+}

@@ -47,7 +47,8 @@ type sources struct {
 	degraded     bool
 	recentFiles  []string
 	markers      []string
-	teamHint     string // "" unless at least two signals of parallel work are present
+	upstream     []Moved // linked repositories next to this one that moved since its last commit
+	teamHint     string  // "" unless at least two signals of parallel work are present
 }
 
 func collect(dir string) sources {
@@ -106,6 +107,7 @@ func collect(dir string) sources {
 		}
 	}
 	s.teamHint = teamHint(ownerCount(dir), len(dedupe(lines(must(run(dir, "git", "log", "--since=14.days", "--format=%an"))))), assigneeCount(s.doing))
+	s.upstream = siblingUpstream(dir)
 	inv := discover.Scan(dir)
 	s.harness = inv.Lines(8)
 	s.degraded = !inv.HasCoreHarness()

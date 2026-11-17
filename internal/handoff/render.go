@@ -51,6 +51,19 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 		p("%s", s.teamHint)
 	}
 
+	if len(s.upstream) > 0 {
+		p("")
+		p("## Upstream changes")
+		p("Repositories this one links to (`links:` in relai.yaml, found next to it) with commits after the last commit here:")
+		for i, u := range s.upstream {
+			if i == 3 {
+				p("- … (%d more)", len(s.upstream)-3)
+				break
+			}
+			p("- `%s`: %d commit(s), latest %s — `relai handoff ../%s` before relying on it", u.ID, u.Commits, u.Last, u.ID)
+		}
+	}
+
 	if !s.degraded {
 		p("")
 		p("## Tasks")

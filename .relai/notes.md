@@ -36,6 +36,8 @@
 - 2026-11-16 — Weak mentions of discover --links are evidence only — never write links: from them without a person checking. Measured 6-7 true out of 10 (51% on the home folder); since `relai-p30` they skip a repo's own task/notes/spec/handoff files and need a path-like context for one-lowercase-word names, which gives 89% on the same folder (false mentions 18 to 2, true 19 to 17), and `--min-weak` defaults to 2 (`--propose`: 82% recall at 98% precision over two folders, was 61% at 98%). One owner, 14 repositories, tuned on the data it was judged on.
 - 2026-11-16 — `relai sync` installs a CI job only where the repository already has `.github/`, `.forgejo/` or `.gitea/` (the design did not say what to do with none: a file in a CI folder the repo does not use would be noise); the cache directory can be moved with `RELAI_CACHE_DIR` (tests, CI).
 
+- 2026-11-17 — `relai handoff --workspace <folder>` (workspace handoff v0.1) and `## Upstream changes` in the handoff (v0.8): upstream = commits made in a linked neighbour after this repo's last commit, never cut by the budget, omitted when empty (no placeholder). Task counts say the date of the committed list and the unfinished epics they leave out: a test on the real machine showed counts off by the epics and by four tasks closed in bd but still open in a stale `.beads/issues.jsonl`.
+
 ### Pitfalls
 <!-- Things that cost time once and will again: symptom → cause → what to do. -->
 - `bd init` makes its own commit and edits AGENTS.md/.gitignore → use `--skip-agents --skip-hooks`, then `git reset --soft HEAD~1` and recommit.

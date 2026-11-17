@@ -46,6 +46,7 @@ type JSONDoc struct {
 		// Open holds the tasks of a backend that does not say which are ready (snapshot, GitHub).
 		Open []JSONTask `json:"open"`
 	} `json:"tasks"`
+	Upstream       []Moved      `json:"upstream_changes"`
 	Changes        []JSONChange `json:"changes"`
 	ChangesProblem string       `json:"changes_problem,omitempty"`
 	Harness        []string     `json:"harness"`
@@ -66,6 +67,10 @@ func BuildJSON(dir string) ([]byte, error) {
 	d.State.Branch, d.State.Head = s.branch, s.head
 	d.State.Uncommitted = cleanAll(stripStatus(s.dirty))
 	d.State.Commits = cleanAll(s.commits)
+	d.Upstream = s.upstream
+	if d.Upstream == nil {
+		d.Upstream = []Moved{}
+	}
 
 	conv := func(ts []task) []JSONTask {
 		out := []JSONTask{}

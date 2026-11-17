@@ -208,6 +208,18 @@ counts come from the committed copy of the task list and can lag the live one; t
 clone URLs are listed but not read. Use `--max-tokens` to change the budget: detail is dropped first, then the least
 active projects are named without detail, then only counted.
 
+To see where the work stands in the repositories you have cloned side by side, without an index:
+
+```sh
+relai handoff --workspace ~/projets --depth 2     # one block per repository, ≤ 1,500 tokens by default
+```
+
+Each block has the branch and uncommitted files, the open and in-progress tasks (with the date of the committed list
+they come from, a warning when it is older than the last commit, and the number of unfinished epics that are not
+counted), the `next:` of each active change and the *Next session* notes. A project's `links:` that point to a
+repository in the same folder add an *upstream changes* line: how many commits were made there after the last
+commit here. The single-repository `relai handoff` shows the same section when a linked repository next to it moved.
+
 `relai handoff` stays the answer for one project: it is the same idea at the scale of one repository, and it now asks `bd`
 only when the project changed since the last time (the answers are cached in your user cache directory, never in the repo).
 
