@@ -100,7 +100,7 @@ Early development (v0.x): everything may change.
   dollars, and no gain on repositories with no tracker or notes. Treat them as indications.
 - The multi-project overview was measured on 16 repositories of one developer working alone; the team server
   matters when several people or agents work in parallel.
-- Not built yet: upstream changes shown in the handoff, shared hooks and per-repo skill selection (see
+- Not built yet: shared hooks and per-repo skill selection (see
   [`docs/multi-repo.md`](docs/multi-repo.md)).
 - Handoff text is information, not instructions. Do not put secrets in notes, task titles or commit messages.
 

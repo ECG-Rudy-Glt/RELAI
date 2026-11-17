@@ -161,7 +161,7 @@ active change, the `### Next session` lines of the notes, and *upstream changes*
 the last commit here. Everything is read from files and git, never `bd` or `openspec`, so the task counts
 come from the committed `.beads/issues.jsonl`: each block says the date of that copy, flags it when it is
 older than the repository's last commit, and says how many unfinished epics are not counted (`bd list`
-counts them). The single-repository handoff gets the same *Upstream changes* section (format v0.8) when a
+counts them). The single-repository handoff gets the same *Upstream changes* section (format v0.10) when a
 linked repository next to it moved. `relai workspace` is the older, index-based view (`relai index build`).
 `relai index build --scan` and `relai discover --links` find the repositories of a folder and the mentions
 between them (evidence for a person or agent to confirm; `relai.yaml` gets an optional `links:`).
@@ -198,4 +198,4 @@ Decided on 2026-11-16 (see the design of the change `shared-conventions-hub`):
    GitLab test repository is still needed.
 
 Still open: per-repo skill selection (all hub skills are installed), the `consumers` command, and
-the upstream-changes section of the workspace view.
+and a `relai-workspace.yaml` listing paths.
