@@ -97,3 +97,34 @@ func TestLinesTruncates(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+// A project's own state, pitfalls and decision files are found, at the root first, while a plan
+// deeper down whose name contains "changelog" comes after them and look-alike names do not count.
+// Shaped after a real repository where only that plan was listed.
+func TestStateAndDecisionFilesAreFoundRootFirst(t *testing.T) {
+	dir := t.TempDir()
+	for _, f := range []string{
+		"ETAT.md", "DECISIONS.md", "reference/PIEGES.md", "plans/a1b_changelog_texte_2026-10-28.md",
+		"docs/PROJECT_STATUS.md", "statement.md", "estate.md", "src/state.go", "reference/PLATEFORME.md",
+	} {
+		p := filepath.Join(dir, f)
+		_ = os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got := map[string][]string{}
+	for _, g := range Scan(dir).Groups {
+		got[g.Kind] = g.Items
+	}
+	if d := strings.Join(got[Decisions], ", "); d != "DECISIONS.md" {
+		t.Errorf("decision records = %q, want DECISIONS.md", d)
+	}
+	want := "ETAT.md, docs/PROJECT_STATUS.md, plans/a1b_changelog_texte_2026-10-28.md, reference/PIEGES.md"
+	if d := strings.Join(got[Docs], ", "); d != want {
+		t.Errorf("docs = %q\nwant  %q (root first; statement.md, estate.md and code files are not state docs)", d, want)
+	}
+	if l := Scan(dir).Lines(1); !strings.Contains(strings.Join(l, "\n"), "Docs to read on demand: ETAT.md, …") {
+		t.Errorf("cut to one item, the root state file must be the one kept:\n%s", strings.Join(l, "\n"))
+	}
+}
