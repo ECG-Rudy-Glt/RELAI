@@ -71,6 +71,12 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 			p("Tasks cannot be read here: %s. Fresh clone? Run `bd bootstrap --yes` to load them from `.beads/issues.jsonl`.", s.beadsProblem)
 			if len(s.snapshot) > 0 {
 				p("From `.beads/issues.jsonl` (a snapshot kept in git, it may lag the live list):")
+				if stale := namedInCommits(s); len(stale) > 0 {
+					p("Check first — still open in the snapshot but named in recent commits (done? close them):")
+					for _, l := range head(stale, 5) {
+						p("- %s", short(l, 110))
+					}
+				}
 				var doing, rest []snapTask
 				for _, t := range s.snapshot {
 					if t.Status == "in_progress" {
@@ -242,7 +248,13 @@ func render(name string, s sources, commits, tasks, harness, recentCap, markersC
 func namedInCommits(s sources) []string {
 	var out []string
 	seen := map[string]bool{}
-	for _, group := range [][]task{s.doing, s.ready, s.blocked} {
+	groups := [][]task{s.doing, s.ready, s.blocked}
+	var snap []task // the snapshot stands in for the live list when bd cannot be read
+	for _, t := range s.snapshot {
+		snap = append(snap, task{ID: t.ID, Title: t.Title, Priority: t.Priority})
+	}
+	groups = append(groups, snap)
+	for _, group := range groups {
 		for _, t := range group {
 			if seen[t.ID] {
 				continue
