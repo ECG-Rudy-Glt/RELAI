@@ -114,7 +114,11 @@ With one, in this order, each list omitted when empty except *Ready*:
 
 1. **Check first** — open tasks (in progress, ready or blocked) whose ID appears as a whole word in
    one of the recent commit subjects, with that commit. At most 5. These are often finished work
-   that nobody closed.
+   that nobody closed. A whole ID: a child ID (`a-1.2`) does not name its parent (`a-1`), a full stop
+   that ends a sentence (`a-1.`) still names it. Epics are left out (their ID is named while their
+   children are worked on), and so is a commit that changed the task's own line in
+   `.beads/issues.jsonl` and left it open there: that commit created or updated the task, it did not
+   finish it. A commit that only carries a re-export without touching that line still counts.
 2. **In progress** — ID, priority, title.
 3. **Ready (unblocked, N total)** — ID, priority, title, in the backend's order (priority first).
 4. **Blocked (N total)** — ID, priority, title, `blocked by` the blocking IDs. A ready list alone

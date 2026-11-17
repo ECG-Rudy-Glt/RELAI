@@ -460,6 +460,12 @@ func TestCheckFirstAlsoFromTheSnapshot(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, ".beads", "issues.jsonl"), []byte(`{"id":"ex-1","title":"Add CSV export","status":"open","priority":1,"issue_type":"task"}`+"\n"+`{"id":"ex-2","title":"Add JSON export","status":"open","priority":2,"issue_type":"task"}`+"\n"), 0o644)
 	run("init", "-q", "-b", "main")
 	run("add", "-A")
+	run("commit", "-q", "-m", "chore: plan the exports")
+	// The feature commit forgets to close ex-1 but carries a fresh export (as a pre-commit hook would)
+	// that changes another task's line: it must still be reported.
+	_ = os.WriteFile(filepath.Join(dir, ".beads", "issues.jsonl"), []byte(`{"id":"ex-1","title":"Add CSV export","status":"open","priority":1,"issue_type":"task"}`+"\n"+`{"id":"ex-2","title":"Add JSON export","status":"open","priority":1,"issue_type":"task"}`+"\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(dir, "export.go"), []byte("package x\n"), 0o644)
+	run("add", "-A")
 	run("commit", "-q", "-m", "feat: CSV export (ex-1)")
 	// a bd that cannot read the tasks, so the snapshot is used
 	fake := t.TempDir()
@@ -471,5 +477,51 @@ func TestCheckFirstAlsoFromTheSnapshot(t *testing.T) {
 	}
 	if !strings.Contains(doc, "Check first — still open in the snapshot") || !strings.Contains(doc, "`ex-1` Add CSV export, in ") || strings.Contains(doc, "`ex-2` Add JSON export, in ") {
 		t.Errorf("snapshot check-first missing or wrong:\n%s", doc)
+	}
+}
+
+// Epics and parents are never "Check first": an epic's id is named while its children are worked on,
+// and a child's id ("pg-4.1") does not name its parent ("pg-4").
+func TestNamedInCommitsSkipsEpicsAndParents(t *testing.T) {
+	s := sources{
+		dir:     t.TempDir(),
+		commits: []string{"9101f28 2026-06-05 fix: hotfix, pg-4.1 reopened", "e6c30be 2026-06-04 docs: state of the pg epic pg-9"},
+		ready:   []task{{ID: "pg-4", Title: "Migrate"}, {ID: "pg-4.1", Title: "Child"}, {ID: "pg-9", Title: "The epic", Type: "epic"}},
+	}
+	got := namedInCommits(s)
+	if len(got) != 1 || !strings.HasPrefix(got[0], "`pg-4.1` Child, in 9101f28") {
+		t.Fatalf("got %q, want only pg-4.1 (pg-4 is its parent, pg-9 an epic)", got)
+	}
+}
+
+// End to end with a real bd answer: a task created by the commit that names it is not "Check first".
+func TestCheckFirstIgnoresTheCommitThatCreatedTheTask(t *testing.T) {
+	dir := t.TempDir()
+	run := func(args ...string) {
+		c := exec.Command("git", args...)
+		c.Dir = dir
+		c.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	_ = os.MkdirAll(filepath.Join(dir, ".beads"), 0o755)
+	run("init", "-q", "-b", "main")
+	_ = os.WriteFile(filepath.Join(dir, "a"), []byte("a"), 0o644)
+	run("add", "-A")
+	run("commit", "-q", "-m", "chore: start")
+	_ = os.WriteFile(filepath.Join(dir, ".beads", "issues.jsonl"), []byte(`{"id":"ex-7","title":"Open the writes","status":"open","priority":1,"issue_type":"task"}`+"\n"), 0o644)
+	run("add", "-A")
+	run("commit", "-q", "-m", "docs: plan of the writes, tickets ex-7")
+	fakeBD(t, `case "$1" in ready) echo '[{"id":"ex-7","title":"Open the writes","priority":1,"issue_type":"task"}]';; *) echo '[]';; esac`)
+	doc, err := Build(dir, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(doc, "Check first") {
+		t.Errorf("ex-7 was created by the commit naming it, it is not work done:\n%s", doc)
+	}
+	if !strings.Contains(doc, "`ex-7` P1 Open the writes") {
+		t.Errorf("ex-7 should still be listed as ready:\n%s", doc)
 	}
 }

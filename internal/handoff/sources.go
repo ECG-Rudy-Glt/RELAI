@@ -15,6 +15,7 @@ type task struct {
 	Priority  int      `json:"priority"`
 	Assignee  string   `json:"assignee"`
 	BlockedBy []string `json:"blocked_by"`
+	Type      string   `json:"issue_type"`
 }
 
 type change struct {
@@ -26,6 +27,7 @@ type change struct {
 }
 
 type sources struct {
+	dir          string
 	branch, head string
 	commits      []string
 	dirty        []string
@@ -53,6 +55,7 @@ type sources struct {
 
 func collect(dir string) sources {
 	var s sources
+	s.dir = dir
 	s.branch = strings.TrimSpace(must(run(dir, "git", "branch", "--show-current")))
 	s.head = strings.TrimSpace(must(run(dir, "git", "log", "-1", "--format=%h %cs")))
 	s.commits = lines(must(run(dir, "git", "log", "-20", "--format=%h %cs %s")))

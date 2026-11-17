@@ -169,3 +169,55 @@ func TestClosesNeedsKeywordThenIds(t *testing.T) {
 		}
 	}
 }
+
+// A Beads child id ("p-1.2") must never close or name its parent ("p-1"): with the old boundary,
+// "Closes p-1.2" on the default branch made `tidy --apply` close p-1 as well.
+func TestAChildIDNeverClosesItsParent(t *testing.T) {
+	dir := t.TempDir()
+	sh(t, dir, "init", "-q", "-b", "main")
+	_ = os.MkdirAll(filepath.Join(dir, ".beads"), 0o755)
+	_ = os.WriteFile(filepath.Join(dir, ".beads", "issues.jsonl"), []byte(
+		`{"id":"p-1","title":"Parent","status":"open","priority":1,"issue_type":"task"}`+"\n"+
+			`{"id":"p-1.2","title":"Child","status":"open","priority":1,"issue_type":"task"}`+"\n"), 0o644)
+	sh(t, dir, "add", "-A")
+	sh(t, dir, "commit", "-q", "-m", "chore: plan")
+	_ = os.WriteFile(filepath.Join(dir, "f"), []byte("x"), 0o644)
+	sh(t, dir, "add", "-A")
+	sh(t, dir, "commit", "-q", "-m", "fix: the child\n\nCloses p-1.2")
+	p, err := Build(dir, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(p.Close); got != "p-1.2" {
+		t.Errorf("close = %q, want only p-1.2 (p-1 is its parent, not closed by it)", got)
+	}
+	if strings.Contains(ids(p.Named), "p-1") {
+		t.Errorf("named = %q: the parent is not named by its child's id", ids(p.Named))
+	}
+}
+
+// A commit that created or updated a task, and left it open in its own .beads/issues.jsonl, is
+// not reported as "named without closes": it says itself that the task stays open.
+func TestACommitThatCreatedATaskIsNotReportedAsNamed(t *testing.T) {
+	dir := t.TempDir()
+	sh(t, dir, "init", "-q", "-b", "main")
+	write := func(jsonl, msg string) {
+		_ = os.MkdirAll(filepath.Join(dir, ".beads"), 0o755)
+		_ = os.WriteFile(filepath.Join(dir, ".beads", "issues.jsonl"), []byte(jsonl), 0o644)
+		_ = os.WriteFile(filepath.Join(dir, "f"), []byte(msg), 0o644)
+		sh(t, dir, "add", "-A")
+		sh(t, dir, "commit", "-q", "-m", msg)
+	}
+	one := `{"id":"p-1","title":"One","status":"open","priority":1,"issue_type":"task"}` + "\n"
+	two := `{"id":"p-2","title":"Two","status":"open","priority":1,"issue_type":"task"}` + "\n"
+	write(one, "chore: start")
+	write(one+two, "docs: plan, tickets p-2") // creates p-2: not a sign of work done
+	write(one+two, "feat: first part of p-1") // does not touch p-1's line: reported
+	p, err := Build(dir, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(p.Named); got != "p-1" {
+		t.Errorf("named = %q, want only p-1 (p-2 was created by the commit naming it)", got)
+	}
+}
