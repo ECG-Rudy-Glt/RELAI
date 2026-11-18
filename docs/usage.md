@@ -217,8 +217,10 @@ relai handoff --workspace ~/projets --depth 2     # one block per repository, â‰
 Each block has the branch and uncommitted files, the open and in-progress tasks (with the date of the committed list
 they come from, a warning when it is older than the last commit, and the number of unfinished epics that are not
 counted), the `next:` of each active change and the *Next session* notes. A project's `links:` that point to a
-repository in the same folder add an *upstream changes* line: how many commits were made there after the last
-commit here. The single-repository `relai handoff` shows the same section when a linked repository next to it moved.
+repository in the same folder add an *upstream changes* entry: how many commits were made there after the last commit here, the subjects of
+the newest ones, the dated notes (decisions, pitfalls) of that project since, and the command to read them first (format
+v0.10). The line used to say only that a project had moved; Claude Haiku and Codex read it and did not follow it, so it
+now says what changed. The single-repository `relai handoff` shows the same section when a linked repository next to it moved.
 
 `relai handoff` stays the answer for one project: it is the same idea at the scale of one repository, and it now asks `bd`
 only when the project changed since the last time (the answers are cached in your user cache directory, never in the repo).

@@ -1,6 +1,6 @@
 # Post LinkedIn — Relai (prêt, à publier le mercredi 18 novembre 2026)
 
-Mis à jour le 2026-11-16 pour Relai v0.9.0. Chiffres : `eval/README.md` (4 projets de test, Claude Haiku et Sonnet).
+Mis à jour le 2026-11-18 pour Relai v0.10 (format du handoff). Chiffres : `eval/README.md`, `eval/resume2` (Claude Haiku et Sonnet) et `eval/handoff-debt/v2` (Codex).
 Comparaison avec les autres outils : https://relai.gault-rudy.com/fr/docs/compare/
 
 ## Version française
@@ -19,11 +19,11 @@ J'ai construit Relai pour cela : des fichiers dans git et un binaire Go. Pas de 
 
 Pour les équipes, Relai-Team (facultatif, auto-hébergé) ajoute un tableau commun où chaque personne ou agent réserve une tâche, pour que deux ne démarrent jamais la même.
 
-Mesuré, pas promis : sur 4 projets de test, avec Claude Haiku et Sonnet, même bonne réponse qu'en lisant la documentation, pour 1,2 à 3,4 fois moins cher. Et aucun gain sur un dépôt sans suivi de tâches ni notes : Relai résume ce qui existe, il n'invente rien.
+Mesuré, pas promis : sur 4 projets de test, avec Claude Haiku et Sonnet, même bonne réponse qu'en lisant la documentation, pour 1,2 à 3,4 fois moins cher. Sur des tâches écrites par un autre agent, dans une appli dont un dépôt lié avait changé entre-temps : sans le handoff, aucun essai ne l'a remarqué (0 sur 30) ; avec, 28 sur 30. Sur un seul dépôt, aucune différence : les agents trouvent les notes seuls. Et aucun gain sur un dépôt sans suivi de tâches ni notes : Relai résume ce qui existe, il n'invente rien.
 
 Ce n'est pas un outil de mémoire comme mem0 ou claude-mem, ni une méthode comme Trellis ou OpenSpec. Il calcule un résumé, toujours le même pour un même état du dépôt. La comparaison honnête est sur le site.
 
-Version 0.x, Apache 2.0, un seul développeur derrière, testé avec des modèles Claude uniquement. Je cherche surtout les cas où ça casse.
+Version 0.x, Apache 2.0, un seul développeur derrière, testé surtout avec Claude. Un collègue a essayé Codex sur une série partielle : aucun gain démontré. Je cherche surtout les cas où ça casse.
 
 Site : https://relai.gault-rudy.com
 Code : https://github.com/ECG-Rudy-Glt/RELAI
@@ -47,11 +47,11 @@ So I built Relai: files in git plus one Go binary. No server, no account, no mod
 
 For teams, Relai-Team (optional, self-hosted) adds a shared board where each person or agent claims a task, so two never start the same one.
 
-Measured, not promised: on 4 fixture projects, with Claude Haiku and Sonnet, the same correct answer as reading the docs, at 1.2x to 3.4x lower cost. And no gain on a repo with no task tracker or notes: Relai summarises what exists, it invents nothing.
+Measured, not promised: on 4 fixture projects, with Claude Haiku and Sonnet, the same correct answer as reading the docs, at 1.2x to 3.4x lower cost. On tasks written by a separate agent, in an app whose linked repo had changed meanwhile: without the handoff no run noticed (0 of 30); with it, 28 of 30. On a single repo, no difference: agents find the notes themselves. And no gain on a repo with no task tracker or notes: Relai summarises what exists, it invents nothing.
 
 It is not a memory tool like mem0 or claude-mem, nor a method like Trellis or OpenSpec. It computes a summary, always the same for the same repository state. The honest comparison is on the site.
 
-v0.x, Apache 2.0, one developer, tested with Claude models only. I mostly want to hear where it breaks.
+v0.x, Apache 2.0, one developer, tested mostly with Claude. A colleague tried Codex on a partial series: no gain shown. I mostly want to hear where it breaks.
 
 Site: https://relai.gault-rudy.com
 Code: https://github.com/ECG-Rudy-Glt/RELAI
@@ -61,8 +61,8 @@ Code: https://github.com/ECG-Rudy-Glt/RELAI
 
 ## À vérifier avant de publier
 
-- Les chiffres viennent de `eval/README.md` : 4 projets de test écrits par l'auteur, 2 à 3 essais par cas, modèles Claude seulement. « 1,2 à 3,4 fois moins cher » est le gain en dollars ; en tokens bruts c'est 1,6 à 16 fois. Ne pas écrire « 56 fois ».
+- Les chiffres viennent de `eval/README.md` : 4 projets de test écrits par l'auteur, 2 à 3 essais par cas, modèles Claude seulement. Le 0 sur 30 contre 28 sur 30 vient de `eval/resume2` (tâches écrites par un agent qui ne connaissait pas Relai, Haiku et Sonnet, 5 essais par cas) ; l'angle non testé est un AGENTS.md qui nommerait les dépendances. Codex (`eval/handoff-debt/v2`) : série arrêtée à 49 essais sur 60, lancée par un tiers, et elle ne reproduit pas le gain. « 1,2 à 3,4 fois moins cher » est le gain en dollars ; en tokens bruts c'est 1,6 à 16 fois. Ne pas écrire « 56 fois ».
 - Un test sur les dépôts réels du homelab (27 dépôts) a été lancé puis interrompu : ses résultats partiels ne sont pas dans le post.
 - GitLab Issues (`tasks: gitlab`, via `glab`) n'a jamais été lancé contre un vrai GitLab : ne pas le présenter comme éprouvé.
 - Relai-Team : la PR du README (#20) peut ne pas être fusionnée le jour de la publication ; les liens du post pointent sur le dépôt, pas sur cette page.
-- Versions publiées : Relai v0.9.0, Relai-Team v0.1.2.
+- Versions publiées : Relai v0.9.0, Relai-Team v0.1.2. Le format v0.10 du handoff est sur la branche `feat/upstream-subjects` : vérifier qu'il est fusionné avant de le citer.

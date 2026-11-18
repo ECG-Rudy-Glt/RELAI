@@ -20,13 +20,16 @@ Here is the output of \`relai handoff\`:
 
 $(${RELAI_BIN:-relai} handoff)" ;;
 esac
-res=$(claude -p "$prompt" --model "$model" --output-format json --setting-sources project --strict-mcp-config \
+adddir=""
+[ "${ADD_PARENT:-0}" = 1 ] && [ "$work" != "$w/project" ] && adddir="--add-dir $w/project"
+# shellcheck disable=SC2086
+res=$(claude -p "$prompt" $adddir --model "$model" --output-format json --setting-sources project --strict-mcp-config \
   --no-session-persistence \
   --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(ls:*),Bash(cat:*),Bash(python3:*)" \
   --disallowedTools "WebFetch,WebSearch,Agent,Task,NotebookEdit" 2>/dev/null || echo '{}')
 verdict=$(python3 "$fix/hidden.py" "$task" "$w/project" 2>&1 | tail -1)
 ok=false; [ "$verdict" = PASS ] && ok=true
-printf '%s' "$res" | jq -c --arg f "$(basename "$fix")" --arg m "$model" --arg c "$cond" --arg t "$task" --argjson n "$n" --arg v "$verdict" --argjson ok "$ok" \
-  '{fixtures:$f,model:$m,cond:$c,task:$t,run:$n,pass:$ok,verdict:$v,turns:.num_turns,cost:.total_cost_usd,
+printf '%s' "$res" | jq -c --arg ap "${ADD_PARENT:-0}" --arg f "$(basename "$fix")" --arg m "$model" --arg c "$cond" --arg t "$task" --argjson n "$n" --arg v "$verdict" --argjson ok "$ok" \
+  '{add_parent:$ap,fixtures:$f,model:$m,cond:$c,task:$t,run:$n,pass:$ok,verdict:$v,turns:.num_turns,cost:.total_cost_usd,
     input:((.usage.input_tokens//0)+(.usage.cache_read_input_tokens//0)+(.usage.cache_creation_input_tokens//0)),output:(.usage.output_tokens//0)}' >> "$out"
 rm -rf "$w"
